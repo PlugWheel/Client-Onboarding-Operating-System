@@ -1,65 +1,129 @@
-# Client Onboarding OS
+# Client Onboarding Operating System
 
-**From closed-won to kickoff without manual admin.**
+> From closed-won to kickoff without manual admin.
 
-Client Onboarding OS coordinates commercial validation, workspace provisioning, client intake, missing-item reminders, kickoff scheduling, and onboarding SLA visibility.
+Client Onboarding OS is a portfolio-grade automation system for B2B service businesses. It turns a closed-won HubSpot deal into a controlled delivery handoff: validates the contract and deposit, provisions the client workspace, gathers intake requirements, schedules kickoff, creates initial delivery tasks, and gives managers a live operational view.
 
-## Integration status
+The reference implementation has been exercised end to end with real sandbox/test integrations across HubSpot, Stripe, DocuSign, ClickUp, Google Drive, Gmail, Slack, and Calendly. n8n orchestrates the workflows, PostgreSQL holds canonical state, and a Next.js application provides the manager dashboard and client intake experience.
 
-The complete lifecycle runs locally through n8n and PostgreSQL. Real HubSpot sandbox deals enter
-the system through an idempotent five-minute poller, and real Stripe sandbox PaymentIntents update
-the commercial deposit gate through the Stripe CLI relay. DocuSign demo OAuth, template-driven
-envelope sending, and completion polling provide the contract gate. Real ClickUp project/task,
-Google Drive folder-tree, and Slack channel/message provisioning are connected with persistent
-resource tracking and recovery. Gmail sends tracked intake invitations and missing-item reminders.
-Calendly supplies the tracked kickoff scheduling link; local booking reconciliation uses polling.
-
-Working lifecycle:
+## What the system delivers
 
 ```text
-Closed-won intake
-→ contract and deposit gate
-→ provisioning with partial-failure recovery
-→ tokenized client intake
-→ missing-item reminders
-→ kickoff booking and generated tasks
-→ SLA escalation
-→ completed onboarding
+HubSpot closed-won
+        ↓
+Contract + deposit verification
+        ↓
+ClickUp + Google Drive + Slack provisioning
+        ↓
+Client intake + missing-item reminders
+        ↓
+Calendly kickoff + initial delivery tasks
+        ↓
+SLA visibility + completed onboarding
 ```
 
-## Phase 1
+For each client, the final operational output is a traceable onboarding record with:
 
-This foundation includes:
+- verified contract and deposit status;
+- a ClickUp delivery area with template-driven tasks;
+- a structured Google Drive client folder tree;
+- a dedicated Slack handoff channel and summary;
+- a secure, tokenized intake link and requirement checklist;
+- a tracked Calendly kickoff booking and meeting link;
+- lifecycle history, failures, retry state, owner, blocker, and SLA status.
 
-- A Next.js operations dashboard with deterministic demo data
-- PostgreSQL onboarding schema, lifecycle types, audit history, and seed records
-- Dockerized PostgreSQL and n8n
-- An importable n8n global error-handler workflow
-- Workflow naming, idempotency, retry, and payload conventions
+## Integration map
 
-## Start the dashboard
+| System | Role | How it is used |
+| --- | --- | --- |
+| HubSpot | Sales handoff | An idempotent n8n poller detects closed-won deals and enriches them with contact, company, and owner data. |
+| Stripe | Deposit gate | Signed test-mode events correlate payments to the source deal and update commercial readiness. |
+| DocuSign | Contract gate | OAuth-backed template envelopes are sent and polled until the agreement reaches a terminal state. |
+| n8n | Orchestration | Workflows normalize events, enforce gates, provision resources, send communications, retry failures, and record transitions. |
+| PostgreSQL | System of record | Stores lifecycle state, provider resources, requirements, reminders, failures, tasks, kickoff data, and audit history. |
+| ClickUp | Delivery execution | Creates the client delivery area and starter tasks from a service template. |
+| Google Drive | Document workspace | Creates a client root and standard onboarding subfolders. |
+| Slack | Internal handoff | Creates the client channel and posts the sales-to-delivery summary with resource links. |
+| Gmail | Client communication | Delivers the intake invitation and missing-item reminders. |
+| Calendly | Kickoff scheduling | Supplies the tracked scheduling link and reconciles booking and meeting details. |
+| Next.js | Operations interface | Provides the live ledger, attention queue, lifecycle detail, and intake portal. |
+| Docker Compose | Local platform | Runs n8n and PostgreSQL predictably for development and demonstration. |
 
-```bash
-npm install
-npm run dev
+## Production-grade behavior demonstrated
+
+- Idempotent closed-won ingestion prevents duplicate onboardings.
+- Commercial provisioning stays blocked until every required gate passes.
+- Provider IDs and URLs are persisted instead of living only in n8n execution history.
+- Provisioning steps are independently recoverable, so a failed provider can be retried without duplicating successful resources.
+- Intake links use opaque tokens; reminders stop when requirements are completed.
+- SLA monitoring exposes records that are waiting, at risk, or breached.
+- A global error workflow normalizes failures for operational notification.
+- Workflow exports and fixtures are sanitized; credentials remain in n8n or deployment secrets.
+
+## Verified demonstration
+
+The reference run completed the full sandbox/test lifecycle:
+
+1. A HubSpot deal moved to **Closed Won**.
+2. Stripe confirmed the deposit and DocuSign confirmed the agreement.
+3. n8n created real ClickUp, Drive, and Slack resources.
+4. Gmail delivered the intake request and the client requirements were completed.
+5. Calendly recorded a real kickoff booking with meeting details.
+6. Initial tasks were generated and the onboarding reached **Complete — 100%**.
+
+This proves the integration path in controlled accounts. It is not a claim of production traffic, customer adoption, or measured business savings.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    HS[HubSpot] --> N8N[n8n workflows]
+    ST[Stripe] --> N8N
+    DS[DocuSign] --> N8N
+    N8N <--> DB[(PostgreSQL)]
+    N8N --> CU[ClickUp]
+    N8N --> GD[Google Drive]
+    N8N --> SL[Slack]
+    N8N --> GM[Gmail]
+    N8N --> CA[Calendly]
+    DB --> NX[Next.js dashboard]
+    NX --> DB
 ```
 
-Open `http://localhost:3000`.
+PostgreSQL is deliberately the business system of record. n8n execution history supports diagnostics, but lifecycle decisions and external resource identifiers remain queryable and recoverable independently.
 
-## Start PostgreSQL and n8n
+## Repository guide
+
+```text
+apps/dashboard/          Next.js manager dashboard and client intake portal
+automation/workflows/    Sanitized, importable n8n workflow exports
+automation/fixtures/     Safe webhook fixtures for local testing
+database/migrations/     PostgreSQL schema and lifecycle functions
+docs/architecture/       Architecture notes
+docs/integrations/       Credential and go-live guidance
+CASE_STUDY.md            Portfolio case study
+```
+
+## Run locally
+
+Requirements: Docker with Compose, Node.js 20+, npm, and provider test accounts for live integration tests.
 
 ```bash
 cp .env.example .env
 docker compose up -d
+npm install
+npm run dev
 ```
 
-Open n8n at `http://localhost:5678`. On first launch, create the local owner account and import `automation/workflows/99-global-error-handler.json`.
+- Dashboard: `http://localhost:3000`
+- n8n: `http://localhost:5678`
+- PostgreSQL host port: `55432`
 
-PostgreSQL is exposed to the host on port `55432` by default to avoid colliding with commonly installed local PostgreSQL services. n8n connects to it internally on port `5432`.
+On the first n8n launch, create the local owner account, add credentials inside n8n, and import the required files from `automation/workflows/`. Never commit provider tokens, OAuth secrets, webhook secrets, or an n8n encryption key.
 
-The SQL files under `database/migrations/` run automatically only when the PostgreSQL volume is first created. Apply later migrations through a migration runner or `psql` rather than recreating the volume.
+Database migrations run automatically only when the PostgreSQL volume is first created. Apply later migrations with a migration runner or `psql`; do not recreate a volume that contains data.
 
-## Verify
+## Validate the application
 
 ```bash
 npm run typecheck
@@ -68,33 +132,22 @@ npm run build
 docker compose config --quiet
 ```
 
-See [Phase 1 architecture](docs/architecture/phase-1.md) and [n8n conventions](automation/README.md).
+## Operational workflows
 
-## Test the closed-won webhook
+- `01–04`: HubSpot intake and commercial verification;
+- `05`: real ClickUp, Google Drive, and Slack provisioning;
+- `10–11`: Gmail intake invitations and reminder cycles;
+- `12–13`: Calendly kickoff and onboarding completion;
+- `14–15`: SLA monitoring and targeted provisioning recovery;
+- `99`: global failure normalization and notification handoff;
+- `00-*`: provider connection checks.
 
-Workflow `01 — Intake — HubSpot Closed-Won` exposes the production endpoint below after it is published:
+See [automation/README.md](automation/README.md) for workflow contracts and [docs/integrations/CREDENTIAL_SETUP.md](docs/integrations/CREDENTIAL_SETUP.md) for safe credential setup.
 
-```bash
-curl -X POST http://localhost:5678/webhook/hubspot-closed-won \
-  -H 'Content-Type: application/json' \
-  --data-binary @automation/fixtures/hubspot-closed-won.json
-```
+## Scope and deployment boundary
 
-Replaying the fixture is safe: the response returns `"duplicate": true` and the existing onboarding ID.
+The portfolio build uses provider sandbox, demo, or test environments and runs locally. Before handling real client data, deploy behind HTTPS and add application authentication, role-based access, secret rotation, backups, webhook verification for every inbound provider, monitoring, data-retention controls, and a documented recovery procedure.
 
-## Test commercial readiness
+## Case study
 
-Send the payment first to confirm the onboarding remains commercially blocked, then send the signed contract to release it:
-
-```bash
-curl -X POST http://localhost:5678/webhook/stripe-payment-event \
-  -H 'Content-Type: application/json' \
-  --data-binary @automation/fixtures/stripe-payment-succeeded.json
-
-curl -X POST http://localhost:5678/webhook/docusign-send-contract \
-  -H 'Content-Type: application/json' \
-  -d '{"onboarding_id":"YOUR_ONBOARDING_UUID"}'
-
-# After the signer completes the envelope, run the poller immediately:
-curl http://localhost:5678/webhook/docusign-contract-poller
-```
+Read [CASE_STUDY.md](CASE_STUDY.md) for the business problem, design decisions, end-to-end workflow, implementation evidence, reliability model, and portfolio narrative.
