@@ -1,0 +1,61 @@
+{
+  "id":"GoogleDriveHealth1",
+  "name":"00 — Health — Google Drive Connection",
+  "nodes":[
+    {
+      "parameters":{"path":"health-google-drive","responseMode":"responseNode","options":{}},
+      "id":"67bf5c73-ad6b-4a86-b5cc-ed4d733a50de",
+      "name":"Run Drive Check",
+      "type":"n8n-nodes-base.webhook",
+      "typeVersion":2.1,
+      "position":[180,300],
+      "webhookId":"661417fa-c355-460f-8baa-0996129159c2"
+    },
+    {
+      "parameters":{"authentication":"predefinedCredentialType","nodeCredentialType":"googleDriveOAuth2Api","url":"https://www.googleapis.com/drive/v3/about?fields=user(displayName,emailAddress),storageQuota(limit,usage)","options":{}},
+      "id":"5bb4f267-a653-451c-8543-397302054db5",
+      "name":"Verify Drive Account",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.4,
+      "position":[430,300],
+      "credentials":{"googleDriveOAuth2Api":{"id":"96Wq9LCO536wDx8h","name":"Google Drive account"}}
+    },
+    {
+      "parameters":{"jsCode":"const user=$json.user??{}; if(!user.emailAddress) throw new Error('Google Drive OAuth succeeded but no user account was returned'); const config={account_name:String(user.displayName??''),account_email:String(user.emailAddress),drive_scope:'my_drive'}; return [{json:{...config,config_base64:Buffer.from(JSON.stringify(config)).toString('base64')}}];"},
+      "id":"124931ba-38a5-4303-b0a4-8dc28433ec2a",
+      "name":"Normalize Drive Account",
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[680,300]
+    },
+    {
+      "parameters":{"operation":"executeQuery","query":"UPDATE app.integration_connections SET mode='sandbox',health='healthy',credential_name='Google Drive account',configuration=configuration || convert_from(decode($1,'base64'),'UTF8')::jsonb,last_checked_at=now(),last_error=NULL,updated_at=now() WHERE provider='google_drive' RETURNING display_name,mode,health,last_checked_at,configuration;","options":{"queryReplacement":"={{ $json.config_base64 }}"}},
+      "id":"6c202de4-e284-43ec-9c15-62279437758e",
+      "name":"Mark Drive Healthy",
+      "type":"n8n-nodes-base.postgres",
+      "typeVersion":2.6,
+      "position":[930,300],
+      "credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters":{"respondWith":"json","responseBody":"={{ {ok:true,provider:$json.display_name,mode:$json.mode,health:$json.health,account_name:$json.configuration.account_name,account_email:$json.configuration.account_email,checked_at:$json.last_checked_at} }}","options":{"responseCode":200}},
+      "id":"e453928d-fee9-4bb9-82fa-bddaa97a62ae",
+      "name":"Return Drive Health",
+      "type":"n8n-nodes-base.respondToWebhook",
+      "typeVersion":1.4,
+      "position":[1180,300]
+    }
+  ],
+  "pinData":{},
+  "connections":{
+    "Run Drive Check":{"main":[[{"node":"Verify Drive Account","type":"main","index":0}]]},
+    "Verify Drive Account":{"main":[[{"node":"Normalize Drive Account","type":"main","index":0}]]},
+    "Normalize Drive Account":{"main":[[{"node":"Mark Drive Healthy","type":"main","index":0}]]},
+    "Mark Drive Healthy":{"main":[[{"node":"Return Drive Health","type":"main","index":0}]]}
+  },
+  "active":false,
+  "settings":{"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},
+  "versionId":"1a14f76e-84ed-4b61-89c4-a33dd15113ac",
+  "meta":{"templateCredsSetupCompleted":true},
+  "tags":[]
+}

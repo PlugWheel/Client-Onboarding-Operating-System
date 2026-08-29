@@ -1,0 +1,61 @@
+{
+  "id":"SlackHealth0001",
+  "name":"00 — Health — Slack Connection",
+  "nodes":[
+    {
+      "parameters":{"path":"health-slack","responseMode":"responseNode","options":{}},
+      "id":"22d96349-c0df-4932-b531-d517866f64e4",
+      "name":"Run Slack Check",
+      "type":"n8n-nodes-base.webhook",
+      "typeVersion":2.1,
+      "position":[180,300],
+      "webhookId":"2fe49c40-bf26-4d6b-8dc3-7a9179828a28"
+    },
+    {
+      "parameters":{"authentication":"predefinedCredentialType","nodeCredentialType":"slackApi","url":"https://slack.com/api/auth.test","options":{}},
+      "id":"8dff6072-854e-43cb-acd2-fcc798bb5de2",
+      "name":"Verify Slack Bot",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.4,
+      "position":[430,300],
+      "credentials":{"slackApi":{"id":"3k6jgxX6SSH2CdHO","name":"Slack — Client Onboarding OS"}}
+    },
+    {
+      "parameters":{"jsCode":"if(!$json.ok) throw new Error(`Slack authentication failed: ${$json.error??'unknown error'}`); const config={workspace_id:String($json.team_id??''),workspace_name:String($json.team??''),bot_user_id:String($json.user_id??''),bot_name:String($json.user??''),channel_prefix:'client'}; return [{json:{...config,config_base64:Buffer.from(JSON.stringify(config)).toString('base64')}}];"},
+      "id":"f520c703-a406-49cf-b33e-6bcc27091b62",
+      "name":"Normalize Slack Workspace",
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[680,300]
+    },
+    {
+      "parameters":{"operation":"executeQuery","query":"UPDATE app.integration_connections SET mode='sandbox',health='healthy',credential_name='Slack — Client Onboarding OS',configuration=configuration || convert_from(decode($1,'base64'),'UTF8')::jsonb,last_checked_at=now(),last_error=NULL,updated_at=now() WHERE provider='slack' RETURNING display_name,mode,health,last_checked_at,configuration;","options":{"queryReplacement":"={{ $json.config_base64 }}"}},
+      "id":"84abc4df-b29f-4583-a992-e3767731af90",
+      "name":"Mark Slack Healthy",
+      "type":"n8n-nodes-base.postgres",
+      "typeVersion":2.6,
+      "position":[930,300],
+      "credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters":{"respondWith":"json","responseBody":"={{ {ok:true,provider:$json.display_name,mode:$json.mode,health:$json.health,workspace_id:$json.configuration.workspace_id,workspace_name:$json.configuration.workspace_name,bot_name:$json.configuration.bot_name,checked_at:$json.last_checked_at} }}","options":{"responseCode":200}},
+      "id":"adca5d30-a0d2-4777-aa22-045ba308bed8",
+      "name":"Return Slack Health",
+      "type":"n8n-nodes-base.respondToWebhook",
+      "typeVersion":1.4,
+      "position":[1180,300]
+    }
+  ],
+  "pinData":{},
+  "connections":{
+    "Run Slack Check":{"main":[[{"node":"Verify Slack Bot","type":"main","index":0}]]},
+    "Verify Slack Bot":{"main":[[{"node":"Normalize Slack Workspace","type":"main","index":0}]]},
+    "Normalize Slack Workspace":{"main":[[{"node":"Mark Slack Healthy","type":"main","index":0}]]},
+    "Mark Slack Healthy":{"main":[[{"node":"Return Slack Health","type":"main","index":0}]]}
+  },
+  "active":false,
+  "settings":{"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},
+  "versionId":"a279607d-23b5-43ad-bc29-3c0d2ac47e6a",
+  "meta":{"templateCredsSetupCompleted":true},
+  "tags":[]
+}

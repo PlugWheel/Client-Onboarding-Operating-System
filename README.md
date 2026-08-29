@@ -9,8 +9,9 @@ Client Onboarding OS coordinates commercial validation, workspace provisioning, 
 The complete lifecycle runs locally through n8n and PostgreSQL. Real HubSpot sandbox deals enter
 the system through an idempotent five-minute poller, and real Stripe sandbox PaymentIntents update
 the commercial deposit gate through the Stripe CLI relay. DocuSign demo OAuth, template-driven
-envelope sending, and completion polling provide the contract gate. ClickUp, Google Drive, Slack, Calendly, and email delivery remain simulated
-until their credentials are connected. The interface labels simulated steps explicitly.
+envelope sending, and completion polling provide the contract gate. Real ClickUp project/task,
+Google Drive folder-tree, and Slack channel/message provisioning are connected with persistent
+resource tracking and recovery. Calendly and email delivery remain simulated.
 
 Working lifecycle:
 

@@ -1,0 +1,80 @@
+{
+  "id":"ClickUpHealth001",
+  "name":"00 — Health — ClickUp Connection",
+  "nodes":[
+    {
+      "parameters":{"path":"health-clickup","responseMode":"responseNode","options":{}},
+      "id":"3916fef2-c8d9-4de1-b627-e75d71c7f82a",
+      "name":"Run ClickUp Check",
+      "type":"n8n-nodes-base.webhook",
+      "typeVersion":2.1,
+      "position":[180,300],
+      "webhookId":"c79175c2-38b2-42cb-beb3-d72fd5632402"
+    },
+    {
+      "parameters":{"authentication":"predefinedCredentialType","nodeCredentialType":"clickUpApi","url":"https://api.clickup.com/api/v2/team","options":{}},
+      "id":"cce712c5-ed25-4c86-989d-f38d32647aa2",
+      "name":"Get Authorized Workspaces",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.4,
+      "position":[430,300],
+      "credentials":{"clickUpApi":{"id":"izDvzpvHo6wwzi5R","name":"ClickUp account"}}
+    },
+    {
+      "parameters":{"jsCode":"const teams=$json.teams??[]; if(!teams.length) throw new Error('ClickUp credential is valid but no authorized Workspace was returned'); const team=teams[0]; return [{json:{workspace_id:String(team.id),workspace_name:String(team.name??''),workspace_count:teams.length}}];"},
+      "id":"6334b460-0573-4f10-85fc-960991649de9",
+      "name":"Select Workspace",
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[680,300]
+    },
+    {
+      "parameters":{"authentication":"predefinedCredentialType","nodeCredentialType":"clickUpApi","url":"={{ 'https://api.clickup.com/api/v2/team/' + $json.workspace_id + '/space?archived=false' }}","options":{}},
+      "id":"163878d9-f887-4873-b1f5-4208c78e0973",
+      "name":"Get Workspace Spaces",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.4,
+      "position":[920,300],
+      "credentials":{"clickUpApi":{"id":"izDvzpvHo6wwzi5R","name":"ClickUp account"}}
+    },
+    {
+      "parameters":{"jsCode":"const workspace=$('Select Workspace').item.json; const spaces=$json.spaces??[]; if(!spaces.length) throw new Error('ClickUp Workspace has no accessible Space'); const space=spaces.find(s=>!s.private)??spaces[0]; const config={...workspace,space_id:String(space.id),space_name:String(space.name??''),space_count:spaces.length}; return [{json:{...config,config_base64:Buffer.from(JSON.stringify(config)).toString('base64')}}];"},
+      "id":"088ceef7-ea5f-4475-9c0f-d69ec0b52f80",
+      "name":"Select Provisioning Space",
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[1160,300]
+    },
+    {
+      "parameters":{"operation":"executeQuery","query":"UPDATE app.integration_connections SET mode='sandbox',health='healthy',credential_name='ClickUp account',configuration=configuration || convert_from(decode($1,'base64'),'UTF8')::jsonb,last_checked_at=now(),last_error=NULL,updated_at=now() WHERE provider='clickup' RETURNING display_name,mode,health,last_checked_at,configuration;","options":{"queryReplacement":"={{ $json.config_base64 }}"}},
+      "id":"6ba1d6a0-e050-443f-a172-67eb2b49e138",
+      "name":"Mark ClickUp Healthy",
+      "type":"n8n-nodes-base.postgres",
+      "typeVersion":2.6,
+      "position":[1400,300],
+      "credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters":{"respondWith":"json","responseBody":"={{ {ok:true,provider:$json.display_name,mode:$json.mode,health:$json.health,workspace_id:$json.configuration.workspace_id,workspace_name:$json.configuration.workspace_name,space_id:$json.configuration.space_id,space_name:$json.configuration.space_name,checked_at:$json.last_checked_at} }}","options":{"responseCode":200}},
+      "id":"14eb4dc6-e37f-41c2-9e03-a9d7fc0c7cea",
+      "name":"Return ClickUp Health",
+      "type":"n8n-nodes-base.respondToWebhook",
+      "typeVersion":1.4,
+      "position":[1640,300]
+    }
+  ],
+  "pinData":{},
+  "connections":{
+    "Run ClickUp Check":{"main":[[{"node":"Get Authorized Workspaces","type":"main","index":0}]]},
+    "Get Authorized Workspaces":{"main":[[{"node":"Select Workspace","type":"main","index":0}]]},
+    "Select Workspace":{"main":[[{"node":"Get Workspace Spaces","type":"main","index":0}]]},
+    "Get Workspace Spaces":{"main":[[{"node":"Select Provisioning Space","type":"main","index":0}]]},
+    "Select Provisioning Space":{"main":[[{"node":"Mark ClickUp Healthy","type":"main","index":0}]]},
+    "Mark ClickUp Healthy":{"main":[[{"node":"Return ClickUp Health","type":"main","index":0}]]}
+  },
+  "active":false,
+  "settings":{"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},
+  "versionId":"d976b2ac-d83d-47b8-a29b-d3460280768b",
+  "meta":{"templateCredsSetupCompleted":true},
+  "tags":[]
+}
