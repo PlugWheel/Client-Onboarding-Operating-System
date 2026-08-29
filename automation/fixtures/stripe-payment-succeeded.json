@@ -1,0 +1,13 @@
+{
+  "id": "evt_demo_payment_2001",
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_demo_2001",
+      "status": "succeeded",
+      "metadata": {
+        "source_deal_id": "hubspot-demo-2001"
+      }
+    }
+  }
+}

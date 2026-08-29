@@ -1,0 +1,13 @@
+{
+  "id": "ProvisionEnv0001",
+  "name": "05 — Provisioning — Create Delivery Environment",
+  "nodes": [
+    { "parameters": { "httpMethod": "POST", "path": "provision-onboarding", "responseMode": "responseNode", "options": {} }, "id": "bf53349a-eec5-4afb-a70e-6383193ec670", "name": "Provisioning Request", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [220, 320], "webhookId": "105af151-9135-4e4a-b192-5585490c75f6" },
+    { "parameters": { "jsCode": "const body=$json.body??$json; const id=String(body.onboarding_id??''); const fail=String(body.simulate_failure??''); if(!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Valid onboarding_id is required'); if(fail && !['clickup','google_drive','slack'].includes(fail)) throw new Error('simulate_failure must be clickup, google_drive, or slack'); const payload={onboarding_id:id,simulate_failure:fail}; return [{json:{...payload,payload_base64:Buffer.from(JSON.stringify(payload)).toString('base64')}}];" }, "id": "3180e2c4-a1f8-49da-b1dd-61ac7d91d488", "name": "Validate Provisioning", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [460, 320] },
+    { "parameters": { "operation": "executeQuery", "query": "WITH input AS (SELECT convert_from(decode($1,'base64'),'UTF8')::jsonb p) SELECT app.provision_onboarding((p->>'onboarding_id')::uuid, nullif(p->>'simulate_failure','')) AS result FROM input;", "options": { "queryReplacement": "={{ $json.payload_base64 }}" } }, "id": "dd27d783-73ed-4d53-ae46-a035cfba30d7", "name": "Provision Simulated Adapters", "type": "n8n-nodes-base.postgres", "typeVersion": 2.6, "position": [710, 320], "credentials": { "postgres": { "id": "pWvncY5EEynulaOP", "name": "Postgres account" } } },
+    { "parameters": { "respondWith": "json", "responseBody": "={{ {ok:true,...$json.result,adapter_mode:'simulated'} }}", "options": { "responseCode": 200 } }, "id": "61c27961-6a7b-4471-80fe-bde0f217d8c8", "name": "Return Provisioning Result", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.4, "position": [960, 320] }
+  ],
+  "pinData": {}, "connections": { "Provisioning Request": { "main": [[{ "node": "Validate Provisioning", "type": "main", "index": 0 }]] }, "Validate Provisioning": { "main": [[{ "node": "Provision Simulated Adapters", "type": "main", "index": 0 }]] }, "Provision Simulated Adapters": { "main": [[{ "node": "Return Provisioning Result", "type": "main", "index": 0 }]] } },
+  "active": false, "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq" }, "versionId": "2405cf88-b6b6-4429-8c11-4fd6c00ab92f", "meta": { "templateCredsSetupCompleted": true }, "tags": []
+}
+

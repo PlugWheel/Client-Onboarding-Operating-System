@@ -1,0 +1,13 @@
+{
+  "id": "RetryProvision01",
+  "name": "15 — Operations — Retry Provisioning Step",
+  "nodes": [
+    { "parameters": { "httpMethod": "POST", "path": "retry-provisioning", "responseMode": "responseNode", "options": {} }, "id": "a9c3a5eb-c465-4ef5-8025-c9ac5c05e2ed", "name": "Retry Request", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [220, 320], "webhookId": "15693a77-babf-4871-8f04-4fe0e2b31cd3" },
+    { "parameters": { "jsCode": "const body=$json.body??$json; const id=String(body.onboarding_id??''); const provider=String(body.provider??''); if(!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Valid onboarding_id is required'); if(!['clickup','google_drive','slack'].includes(provider)) throw new Error('Valid failed provider is required'); const payload={onboarding_id:id,provider}; return [{json:{...payload,payload_base64:Buffer.from(JSON.stringify(payload)).toString('base64')}}];" }, "id": "4ccbc450-783e-48a0-afcc-b5c43c45682d", "name": "Validate Retry", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [470, 320] },
+    { "parameters": { "operation": "executeQuery", "query": "WITH input AS (SELECT convert_from(decode($1,'base64'),'UTF8')::jsonb p) SELECT app.retry_provisioning_step((p->>'onboarding_id')::uuid,p->>'provider') AS result FROM input;", "options": { "queryReplacement": "={{ $json.payload_base64 }}" } }, "id": "9f730b35-1270-47d9-9874-97fd6ac6d727", "name": "Retry Failed Step", "type": "n8n-nodes-base.postgres", "typeVersion": 2.6, "position": [720, 320], "credentials": { "postgres": { "id": "pWvncY5EEynulaOP", "name": "Postgres account" } } },
+    { "parameters": { "respondWith": "json", "responseBody": "={{ {ok:true,...$json.result} }}", "options": { "responseCode": 200 } }, "id": "d8f03a3b-ff14-42d0-955c-07468632ac66", "name": "Return Retry Result", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.4, "position": [960, 320] }
+  ],
+  "pinData": {}, "connections": { "Retry Request": { "main": [[{ "node": "Validate Retry", "type": "main", "index": 0 }]] }, "Validate Retry": { "main": [[{ "node": "Retry Failed Step", "type": "main", "index": 0 }]] }, "Retry Failed Step": { "main": [[{ "node": "Return Retry Result", "type": "main", "index": 0 }]] } },
+  "active": false, "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq" }, "versionId": "0ba3b850-11a6-4380-8d60-28ae7fa68a2a", "meta": { "templateCredsSetupCompleted": true }, "tags": []
+}
+

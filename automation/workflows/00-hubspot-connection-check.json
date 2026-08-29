@@ -1,0 +1,105 @@
+{
+  "id": "HubSpotHealth001",
+  "name": "00 — Health — HubSpot Connection",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "health/hubspot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "588a1398-e75f-4059-822d-611fe80f60a1",
+      "name": "Run HubSpot Check",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [220, 320],
+      "webhookId": "d645689b-89b1-4b24-9001-4f27b5a9a729"
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "resource": "deal",
+        "operation": "getAll",
+        "returnAll": false,
+        "limit": 1,
+        "filters": {
+          "includeAssociations": true,
+          "properties": [
+            "dealname",
+            "pipeline",
+            "dealstage",
+            "amount",
+            "closedate",
+            "hubspot_owner_id",
+            "hs_lastmodifieddate"
+          ]
+        }
+      },
+      "id": "40d6b180-3d96-42d9-a670-7bf258079c47",
+      "name": "Verify HubSpot Read Access",
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [480, 320],
+      "alwaysOutputData": true,
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "CCvhDg3jfqJm79pK",
+          "name": "HubSpot Service Key account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE app.integration_connections SET mode = 'sandbox', health = 'healthy', credential_name = 'HubSpot Service Key account', last_checked_at = now(), last_error = NULL, updated_at = now() WHERE provider = 'hubspot' RETURNING provider, display_name, mode, health, last_checked_at;",
+        "options": {}
+      },
+      "id": "801b1f14-637c-494b-bd67-c3dbbb5ce253",
+      "name": "Mark HubSpot Healthy",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [740, 320],
+      "credentials": {
+        "postgres": {
+          "id": "pWvncY5EEynulaOP",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, provider: $json.display_name, mode: $json.mode, health: $json.health, checked_at: $json.last_checked_at, message: 'HubSpot credential and deal read access verified.' } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "e3860741-9a8c-478d-9855-72ac26fcd91f",
+      "name": "Return Health",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [990, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run HubSpot Check": {
+      "main": [[{"node": "Verify HubSpot Read Access", "type": "main", "index": 0}]]
+    },
+    "Verify HubSpot Read Access": {
+      "main": [[{"node": "Mark HubSpot Healthy", "type": "main", "index": 0}]]
+    },
+    "Mark HubSpot Healthy": {
+      "main": [[{"node": "Return Health", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Dhaka",
+    "errorWorkflow": "G59thUjhLUYVEdGq"
+  },
+  "versionId": "923fdcbc-900d-44f8-944c-2ed41c642357",
+  "meta": {"templateCredsSetupCompleted": true},
+  "tags": []
+}

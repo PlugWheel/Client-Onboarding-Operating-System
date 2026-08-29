@@ -1,0 +1,18 @@
+{
+  "event_id": "demo-event-2001",
+  "source_deal_id": "hubspot-demo-2001",
+  "dealstage": "closedwon",
+  "company_name": "Juniper Works",
+  "website": "https://juniper.example",
+  "primary_contact_name": "Avery Morgan",
+  "primary_contact_email": "avery@juniper.example",
+  "deal_name": "Customer operations launch",
+  "amount": 16000,
+  "currency": "USD",
+  "service_template_key": "consulting-standard",
+  "owner_name": "Olivia Park",
+  "owner_email": "olivia@example.com",
+  "closed_won_at": "2026-08-29T00:00:00.000Z",
+  "sla_hours": 72
+}
+

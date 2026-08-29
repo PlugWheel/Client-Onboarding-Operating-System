@@ -1,0 +1,57 @@
+{
+  "id": "StripePayment001",
+  "name": "03 — Commercial — Stripe Payment Event",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "stripe-payment-event", "responseMode": "responseNode", "options": {} },
+      "id": "9271dd33-075e-45e2-b129-eeb834e130f4",
+      "name": "Stripe CLI Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [220, 320],
+      "webhookId": "7c7d5c8b-23d0-4e2a-b542-9a4cccd3f239"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json.body ?? $json;\nconst payment = event.data?.object;\nif (!event.id || !event.type || !payment) throw new Error('Invalid Stripe event payload');\nconst supported = ['payment_intent.succeeded', 'payment_intent.payment_failed'];\nif (!supported.includes(event.type)) throw new Error(`Unsupported Stripe event: ${event.type}`);\nconst onboardingId = payment.metadata?.onboarding_id ?? '';\nconst sourceDealId = payment.metadata?.source_deal_id ?? '';\nif (!onboardingId && !sourceDealId) throw new Error('Stripe metadata requires onboarding_id or source_deal_id');\nconst normalized = {\n  provider: 'stripe', event_id: String(event.id), event_type: String(event.type),\n  onboarding_id: String(onboardingId), source_deal_id: String(sourceDealId),\n  requirement_key: 'deposit', result: event.type === 'payment_intent.succeeded' ? 'paid' : 'failed',\n  external_object_id: String(payment.id ?? '')\n};\nreturn [{ json: { ...normalized, payload_base64: Buffer.from(JSON.stringify(normalized)).toString('base64') } }];"
+      },
+      "id": "40426a7d-fba3-426e-b31d-3c2c728cf170",
+      "name": "Normalize Payment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 320]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT app.process_commercial_event(convert_from(decode($1, 'base64'), 'UTF8')::jsonb) AS result;",
+        "options": { "queryReplacement": "={{ $json.payload_base64 }}" }
+      },
+      "id": "ec52eb29-d35f-4c04-882c-39323893180e",
+      "name": "Evaluate Commercial Readiness",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [720, 320],
+      "credentials": { "postgres": { "id": "pWvncY5EEynulaOP", "name": "Postgres account" } }
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { ok: true, ...$json.result } }}", "options": { "responseCode": 200 } },
+      "id": "44960e26-24dc-48b0-908e-f6e700c380a4",
+      "name": "Acknowledge Stripe",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [970, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Stripe CLI Webhook": { "main": [[{ "node": "Normalize Payment", "type": "main", "index": 0 }]] },
+    "Normalize Payment": { "main": [[{ "node": "Evaluate Commercial Readiness", "type": "main", "index": 0 }]] },
+    "Evaluate Commercial Readiness": { "main": [[{ "node": "Acknowledge Stripe", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq" },
+  "versionId": "37a94ee7-dcc1-4850-b4aa-3cf090f4d12c",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}

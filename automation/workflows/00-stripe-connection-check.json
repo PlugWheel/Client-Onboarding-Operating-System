@@ -1,0 +1,62 @@
+{
+  "id": "StripeHealth001",
+  "name": "00 — Health — Stripe Connection",
+  "nodes": [
+    {
+      "parameters": {"path": "health/stripe", "responseMode": "responseNode", "options": {}},
+      "id": "d2a8b65f-60ee-4b0c-b925-1826009bbadf",
+      "name": "Run Stripe Check",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [220, 320],
+      "webhookId": "81fbdbbf-1c12-4ef2-95fd-e7704f84991b"
+    },
+    {
+      "parameters": {"resource": "balance", "operation": "get"},
+      "id": "e9a60338-9d6e-4c50-b402-f2e2d7e0c5ef",
+      "name": "Verify Stripe Test Access",
+      "type": "n8n-nodes-base.stripe",
+      "typeVersion": 1,
+      "position": [480, 320],
+      "credentials": {
+        "stripeApi": {"id": "gptXAmqRDn7ZMPgM", "name": "Stripe account"}
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE app.integration_connections SET mode='sandbox', health='healthy', credential_name='Stripe account', configuration=configuration || jsonb_build_object('payment_object','payment_intent','metadata_key','source_deal_id'), last_checked_at=now(), last_error=NULL, updated_at=now() WHERE provider='stripe' RETURNING display_name,mode,health,last_checked_at;",
+        "options": {}
+      },
+      "id": "75e8e376-9d59-47e7-94cb-521fd8ba02b4",
+      "name": "Mark Stripe Healthy",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [730, 320],
+      "credentials": {"postgres": {"id": "pWvncY5EEynulaOP", "name": "Postgres account"}}
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok:true, provider:$json.display_name, mode:$json.mode, health:$json.health, checked_at:$json.last_checked_at, message:'Stripe test API access verified.' } }}",
+        "options": {"responseCode": 200}
+      },
+      "id": "bc50af88-79d1-4301-9322-ffca8d676d62",
+      "name": "Return Stripe Health",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [980, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Stripe Check": {"main": [[{"node": "Verify Stripe Test Access", "type": "main", "index": 0}]]},
+    "Verify Stripe Test Access": {"main": [[{"node": "Mark Stripe Healthy", "type": "main", "index": 0}]]},
+    "Mark Stripe Healthy": {"main": [[{"node": "Return Stripe Health", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq"},
+  "versionId": "fed51912-4906-4b34-a7aa-acde756bb7d0",
+  "meta": {"templateCredsSetupCompleted": true},
+  "tags": []
+}

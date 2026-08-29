@@ -1,0 +1,58 @@
+{
+  "id": "PandaContract001",
+  "name": "04 — Commercial — PandaDoc Contract Event",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "pandadoc-contract-event", "responseMode": "responseNode", "options": {} },
+      "id": "6550712c-176e-4d46-87b0-3fdbe859f418",
+      "name": "PandaDoc Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [220, 320],
+      "webhookId": "548d0b8f-9c79-43df-a585-60112367c677"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json.body ?? $json;\nconst document = event.data;\nif (!event.event_id || !event.event || !document) throw new Error('Invalid PandaDoc event payload');\nif (event.event !== 'document_state_changed') throw new Error(`Unsupported PandaDoc event: ${event.event}`);\nconst onboardingId = document.metadata?.onboarding_id ?? '';\nconst sourceDealId = document.metadata?.source_deal_id ?? '';\nif (!onboardingId && !sourceDealId) throw new Error('PandaDoc metadata requires onboarding_id or source_deal_id');\nconst completed = ['document.completed', 'completed'].includes(document.status);\nconst rejected = ['document.declined', 'declined'].includes(document.status);\nif (!completed && !rejected) throw new Error(`Unsupported PandaDoc status: ${document.status}`);\nconst normalized = {\n  provider: 'pandadoc', event_id: String(event.event_id), event_type: String(event.event),\n  onboarding_id: String(onboardingId), source_deal_id: String(sourceDealId),\n  requirement_key: 'contract', result: completed ? 'signed' : 'rejected',\n  external_object_id: String(document.id ?? '')\n};\nreturn [{ json: { ...normalized, payload_base64: Buffer.from(JSON.stringify(normalized)).toString('base64') } }];"
+      },
+      "id": "460162da-c847-41fa-a699-db1f3fdcb33d",
+      "name": "Normalize Contract",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 320]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT app.process_commercial_event(convert_from(decode($1, 'base64'), 'UTF8')::jsonb) AS result;",
+        "options": { "queryReplacement": "={{ $json.payload_base64 }}" }
+      },
+      "id": "74779a08-7ba2-4343-aefd-bb5b62c2f6c5",
+      "name": "Evaluate Commercial Readiness",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [720, 320],
+      "credentials": { "postgres": { "id": "pWvncY5EEynulaOP", "name": "Postgres account" } }
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { ok: true, ...$json.result } }}", "options": { "responseCode": 200 } },
+      "id": "ffb82c50-aa2f-4dba-82e3-2f95fb56c5d1",
+      "name": "Acknowledge PandaDoc",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [970, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "PandaDoc Webhook": { "main": [[{ "node": "Normalize Contract", "type": "main", "index": 0 }]] },
+    "Normalize Contract": { "main": [[{ "node": "Evaluate Commercial Readiness", "type": "main", "index": 0 }]] },
+    "Evaluate Commercial Readiness": { "main": [[{ "node": "Acknowledge PandaDoc", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq" },
+  "versionId": "33a2f56a-e859-4279-8c55-f5f18af835de",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}
+

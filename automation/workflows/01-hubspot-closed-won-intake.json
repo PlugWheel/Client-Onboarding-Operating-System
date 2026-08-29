@@ -1,0 +1,79 @@
+{
+  "id": "HSPClosedWon0001",
+  "name": "01 — Intake — HubSpot Closed-Won",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hubspot-closed-won",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1998f731-59e3-46c1-a58c-4527799e892c",
+      "name": "Closed-Won Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [220, 320],
+      "webhookId": "c53d9020-cfa0-4b31-b30e-5d7c779939cb"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nconst p = body.properties ?? body;\nconst read = (...keys) => keys.map((key) => body[key] ?? p[key]).find((value) => value !== undefined && value !== null && value !== '');\n\nconst required = {\n  source_deal_id: read('source_deal_id', 'objectId', 'dealId', 'hs_object_id'),\n  company_name: read('company_name', 'companyName', 'company'),\n  primary_contact_name: read('primary_contact_name', 'contactName'),\n  primary_contact_email: read('primary_contact_email', 'contactEmail', 'email'),\n  deal_name: read('deal_name', 'dealname', 'dealName'),\n  owner_name: read('owner_name', 'ownerName'),\n  owner_email: read('owner_email', 'ownerEmail')\n};\n\nconst missing = Object.entries(required).filter(([, value]) => !value).map(([key]) => key);\nif (missing.length) throw new Error(`Invalid closed-won payload. Missing: ${missing.join(', ')}`);\n\nconst stage = read('dealstage', 'stage');\nif (stage && !['closedwon', 'closed_won', 'won'].includes(String(stage).toLowerCase())) {\n  throw new Error(`Deal stage is not closed-won: ${stage}`);\n}\n\nconst rawClosedAt = read('closed_won_at', 'closedate', 'closedAt') ?? new Date().toISOString();\nconst closedAt = /^\\d+$/.test(String(rawClosedAt)) ? new Date(Number(rawClosedAt)).toISOString() : new Date(rawClosedAt).toISOString();\nconst amount = Number(read('amount') ?? 0);\nconst valueCents = Number(read('value_cents') ?? Math.round(amount * 100));\nif (!Number.isFinite(valueCents) || valueCents < 0) throw new Error('Deal value must be a non-negative number');\n\nconst normalized = {\n  event_id: String(read('event_id', 'eventId', 'subscriptionId') ?? `${required.source_deal_id}:${closedAt}`),\n  ...required,\n  website: String(read('website') ?? ''),\n  value_cents: valueCents,\n  currency: String(read('currency') ?? 'USD').toUpperCase(),\n  service_template_key: String(read('service_template_key', 'serviceTemplate') ?? 'agency-growth'),\n  closed_won_at: closedAt,\n  sla_hours: Number(read('sla_hours') ?? 72)\n};\n\nreturn [{ json: { ...normalized, payload_base64: Buffer.from(JSON.stringify(normalized)).toString('base64') } }];"
+      },
+      "id": "6f3d6eb8-83d9-4cda-b0fb-a2d17cdbd52a",
+      "name": "Validate and Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 320]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT app.process_closed_won(convert_from(decode($1, 'base64'), 'UTF8')::jsonb) AS result;",
+        "options": {
+          "queryReplacement": "={{ $json.payload_base64 }}"
+        }
+      },
+      "id": "15e78180-a9ac-4cbd-a1d4-46b9c5282b4a",
+      "name": "Create Onboarding Atomically",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [710, 320],
+      "credentials": {
+        "postgres": {
+          "id": "pWvncY5EEynulaOP",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, ...$json.result } }}",
+        "options": {
+          "responseCode": 201
+        }
+      },
+      "id": "72d46bd9-863f-499c-85bd-d03d519a7da2",
+      "name": "Return Onboarding",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [960, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Closed-Won Webhook": { "main": [[{ "node": "Validate and Normalize", "type": "main", "index": 0 }]] },
+    "Validate and Normalize": { "main": [[{ "node": "Create Onboarding Atomically", "type": "main", "index": 0 }]] },
+    "Create Onboarding Atomically": { "main": [[{ "node": "Return Onboarding", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Dhaka",
+    "errorWorkflow": "G59thUjhLUYVEdGq"
+  },
+  "versionId": "ac78bf3e-cb38-46f5-b7ec-031963779f51",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}

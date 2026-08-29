@@ -1,0 +1,15 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+.stripe/
+credentials.json
+*.pem
+*.key
+.DS_Store
+n8n_data/
+postgres_data/
+coverage/
+npm-debug.log*

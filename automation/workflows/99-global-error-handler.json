@@ -1,0 +1,50 @@
+{
+  "name": "99 — Operations — Global Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "79a23dd9-c1ac-4dc0-9ac7-9e9ac81bd465",
+      "name": "Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "5d780b3d-4668-4e3c-b031-f75641a98229", "name": "workflow_name", "value": "={{ $json.workflow.name }}", "type": "string" },
+            { "id": "10b4484a-a706-498b-84d4-fb5adcc34a94", "name": "execution_id", "value": "={{ $json.execution.id }}", "type": "string" },
+            { "id": "de102e4f-90a2-42df-b8a4-2174937abc4a", "name": "error_message", "value": "={{ $json.execution.error.message }}", "type": "string" },
+            { "id": "084d7fef-7610-4559-bce8-a8e8ff1e1733", "name": "failed_at", "value": "={{ $now.toISO() }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a15a743c-43df-47a9-907b-9ec199c98a83",
+      "name": "Normalize Failure",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {},
+      "id": "018db11c-455c-40f1-8f54-dfcd26dc7ced",
+      "name": "Notification Hook — Phase 2",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [740, 300]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Workflow Error": { "main": [[{ "node": "Normalize Failure", "type": "main", "index": 0 }]] },
+    "Normalize Failure": { "main": [[{ "node": "Notification Hook — Phase 2", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka" },
+  "versionId": "6118ab7c-fc65-4e94-b8dc-f2f50411ce02",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}
+

@@ -1,0 +1,9 @@
+{
+  "id":"CompleteOnboard1","name":"13 — Kickoff — Complete Onboarding","nodes":[
+    {"parameters":{"httpMethod":"POST","path":"complete-onboarding","responseMode":"responseNode","options":{}},"id":"2f90f960-cdc2-4370-bdd7-fdfb124c9b33","name":"Completion Request","type":"n8n-nodes-base.webhook","typeVersion":2.1,"position":[230,300],"webhookId":"b468913f-d4b9-440c-872c-18d657613086"},
+    {"parameters":{"jsCode":"const body=$json.body??$json; const id=String(body.onboarding_id??''); if(!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Valid onboarding_id is required'); return [{json:{onboarding_id:id}}];"},"id":"87048404-5644-44cd-a276-32328bc1773b","name":"Validate Completion","type":"n8n-nodes-base.code","typeVersion":2,"position":[470,300]},
+    {"parameters":{"operation":"executeQuery","query":"SELECT app.complete_onboarding($1::uuid) AS result;","options":{"queryReplacement":"={{ $json.onboarding_id }}"}},"id":"eef121f9-586f-4a46-a7a1-ff97f44b532a","name":"Complete Onboarding","type":"n8n-nodes-base.postgres","typeVersion":2.6,"position":[710,300],"credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}},
+    {"parameters":{"respondWith":"json","responseBody":"={{ {ok:true,...$json.result} }}","options":{"responseCode":200}},"id":"d76fdcd9-68fc-47c1-b341-6944a67ae87f","name":"Return Completion","type":"n8n-nodes-base.respondToWebhook","typeVersion":1.4,"position":[950,300]}
+  ],"pinData":{},"connections":{"Completion Request":{"main":[[{"node":"Validate Completion","type":"main","index":0}]]},"Validate Completion":{"main":[[{"node":"Complete Onboarding","type":"main","index":0}]]},"Complete Onboarding":{"main":[[{"node":"Return Completion","type":"main","index":0}]]}},"active":false,"settings":{"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},"versionId":"226af04c-bf03-48ef-aec2-444e00ed5095","meta":{"templateCredsSetupCompleted":true},"tags":[]
+}
+

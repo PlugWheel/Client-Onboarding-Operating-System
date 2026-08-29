@@ -1,0 +1,11 @@
+{
+  "event_id": "pd_demo_contract_2001",
+  "event": "document_state_changed",
+  "data": {
+    "id": "doc_demo_2001",
+    "status": "document.completed",
+    "metadata": {
+      "source_deal_id": "hubspot-demo-2001"
+    }
+  }
+}

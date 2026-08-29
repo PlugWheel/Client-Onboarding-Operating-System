@@ -1,0 +1,7 @@
+{
+  "id":"ReminderCycle01","name":"11 — Intake — Missing-Item Reminder Cycle","nodes":[
+    {"parameters":{"rule":{"interval":[{"field":"hours","hoursInterval":1}]}},"id":"a46723fc-8497-42b8-a976-f789fc877b46","name":"Every Hour","type":"n8n-nodes-base.scheduleTrigger","typeVersion":1.2,"position":[260,300]},
+    {"parameters":{"operation":"executeQuery","query":"SELECT app.run_reminder_cycle() AS result;","options":{}},"id":"5ee10ab8-bd50-47b4-ac87-b044cbb4dbbb","name":"Send Due Reminders","type":"n8n-nodes-base.postgres","typeVersion":2.6,"position":[510,300],"credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}}
+  ],"pinData":{},"connections":{"Every Hour":{"main":[[{"node":"Send Due Reminders","type":"main","index":0}]]}},"active":false,"settings":{"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},"versionId":"315190ae-b688-4c10-832d-b86a201108aa","meta":{"templateCredsSetupCompleted":true},"tags":[]
+}
+

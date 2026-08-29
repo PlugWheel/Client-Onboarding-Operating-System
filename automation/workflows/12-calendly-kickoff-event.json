@@ -1,0 +1,13 @@
+{
+  "id": "KickoffEvent001",
+  "name": "12 — Kickoff — Calendly Booking Event",
+  "nodes": [
+    { "parameters": { "httpMethod": "POST", "path": "calendly-kickoff-event", "responseMode": "responseNode", "options": {} }, "id": "f0c5529a-a81d-469c-93aa-eb671d7dc7b4", "name": "Calendly Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [220, 320], "webhookId": "c87bf570-7823-486d-8b3c-455b4595cb66" },
+    { "parameters": { "jsCode": "const body=$json.body??$json; const id=String(body.onboarding_id??body.payload?.tracking?.utm_content??''); const eventId=String(body.event_id??body.id??''); const startsAt=String(body.starts_at??body.payload?.event?.start_time??''); const url=String(body.meeting_url??body.payload?.event?.location?.join_url??''); if(!/^[0-9a-f-]{36}$/i.test(id)||!eventId||!startsAt) throw new Error('onboarding_id, event_id, and starts_at are required'); const payload={onboarding_id:id,event_id:eventId,starts_at:startsAt,meeting_url:url}; return [{json:{...payload,payload_base64:Buffer.from(JSON.stringify(payload)).toString('base64')}}];" }, "id": "be5c2e34-0aa7-4898-bdb0-e05614aa83a0", "name": "Normalize Booking", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [470, 320] },
+    { "parameters": { "operation": "executeQuery", "query": "WITH input AS (SELECT convert_from(decode($1,'base64'),'UTF8')::jsonb p) SELECT app.record_kickoff_booking((p->>'onboarding_id')::uuid,p->>'event_id',(p->>'starts_at')::timestamptz,p->>'meeting_url') AS result FROM input;", "options": { "queryReplacement": "={{ $json.payload_base64 }}" } }, "id": "50e6792a-ad3b-4582-883b-bf75e41e24a6", "name": "Record Kickoff", "type": "n8n-nodes-base.postgres", "typeVersion": 2.6, "position": [720, 320], "credentials": { "postgres": { "id": "pWvncY5EEynulaOP", "name": "Postgres account" } } },
+    { "parameters": { "respondWith": "json", "responseBody": "={{ {ok:true,...$json.result} }}", "options": { "responseCode": 200 } }, "id": "9ee679d0-e6bb-4b67-82af-874c20fbe337", "name": "Acknowledge Calendly", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.4, "position": [960, 320] }
+  ],
+  "pinData": {}, "connections": { "Calendly Webhook": { "main": [[{ "node": "Normalize Booking", "type": "main", "index": 0 }]] }, "Normalize Booking": { "main": [[{ "node": "Record Kickoff", "type": "main", "index": 0 }]] }, "Record Kickoff": { "main": [[{ "node": "Acknowledge Calendly", "type": "main", "index": 0 }]] } },
+  "active": false, "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq" }, "versionId": "29674158-d88b-46e2-bb71-9ac197399a27", "meta": { "templateCredsSetupCompleted": true }, "tags": []
+}
+

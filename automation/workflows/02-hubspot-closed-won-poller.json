@@ -1,0 +1,177 @@
+{
+  "id": "HubSpotPoller001",
+  "name": "02 — Intake — HubSpot Closed-Won Poller",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "minutes", "minutesInterval": 5}]
+        }
+      },
+      "id": "e7a322a9-a005-48f7-bcae-4ac8d624589f",
+      "name": "Every Five Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [180, 220]
+    },
+    {
+      "parameters": {
+        "path": "hubspot/run-closed-won-poller",
+        "options": {}
+      },
+      "id": "7fbc35d9-983f-4ba8-aa9c-b1a1ad9dd4e6",
+      "name": "Run Poller Now",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [180, 420],
+      "webhookId": "a51ecb5d-0881-4858-8577-61d495218152"
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "url": "https://api.hubapi.com/crm/v3/objects/deals",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "limit", "value": "100"},
+            {"name": "properties", "value": "dealname,pipeline,dealstage,amount,closedate,hubspot_owner_id,hs_lastmodifieddate"},
+            {"name": "associations", "value": "contacts,companies"}
+          ]
+        },
+        "options": {}
+      },
+      "id": "386b9a87-10f5-4e67-b89c-bdf54bc78e20",
+      "name": "Fetch HubSpot Deals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [440, 320],
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "CCvhDg3jfqJm79pK",
+          "name": "HubSpot Service Key account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "results",
+        "options": {}
+      },
+      "id": "ab0b23ae-e1fb-418d-b383-0677fd8cd66d",
+      "name": "Split Deals",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "const deal = $json;\nif (deal.properties?.pipeline !== 'default' || deal.properties?.dealstage !== 'closedwon') return [];\nconst contactId = deal.associations?.contacts?.results?.[0]?.id;\nconst companyId = deal.associations?.companies?.results?.[0]?.id;\nif (!contactId || !companyId) throw new Error(`Closed-won deal ${deal.id} requires an associated contact and company`);\nif (!deal.properties?.hubspot_owner_id) throw new Error(`Closed-won deal ${deal.id} requires a deal owner`);\nreturn [{json:{deal,contact_id:String(contactId),company_id:String(companyId),owner_id:String(deal.properties.hubspot_owner_id)}}];"
+      },
+      "id": "9ce57fd6-5ce0-40d5-a479-b13d2a01461e",
+      "name": "Select Complete Closed-Won Deals",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 320]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "url": "=https://api.hubapi.com/crm/v3/objects/contacts/{{ $json.contact_id }}?properties=firstname,lastname,email",
+        "options": {}
+      },
+      "id": "d1336784-6dca-4eaa-b1a8-98af1181d20b",
+      "name": "Fetch Primary Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1170, 320],
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "CCvhDg3jfqJm79pK",
+          "name": "HubSpot Service Key account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $('Select Complete Closed-Won Deals').item.json.company_id }}?properties=name,domain",
+        "options": {}
+      },
+      "id": "80cfe73b-cc63-4e8a-9986-d4839264d460",
+      "name": "Fetch Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1410, 320],
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "CCvhDg3jfqJm79pK",
+          "name": "HubSpot Service Key account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "url": "=https://api.hubapi.com/crm/v3/owners/{{ $('Select Complete Closed-Won Deals').item.json.owner_id }}",
+        "options": {}
+      },
+      "id": "bfae02a4-990e-43b0-aa28-ac7c19d03a8a",
+      "name": "Fetch Deal Owner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1650, 320],
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "CCvhDg3jfqJm79pK",
+          "name": "HubSpot Service Key account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const selected=$('Select Complete Closed-Won Deals').item.json;\nconst deal=selected.deal;\nconst contact=$('Fetch Primary Contact').item.json.properties ?? {};\nconst company=$('Fetch Company').item.json.properties ?? {};\nconst owner=$json;\nconst contactName=[contact.firstname,contact.lastname].filter(Boolean).join(' ').trim();\nconst ownerName=[owner.firstName,owner.lastName].filter(Boolean).join(' ').trim();\nconst companyName=company.name||company.domain||deal.properties.dealname;\nconst required={company_name:companyName,primary_contact_name:contactName,primary_contact_email:contact.email,owner_name:ownerName,owner_email:owner.email};\nconst missing=Object.entries(required).filter(([,v])=>!v).map(([k])=>k);\nif(missing.length) throw new Error(`HubSpot deal ${deal.id} is missing: ${missing.join(', ')}`);\nconst normalized={event_id:`hubspot:${deal.id}:closedwon`,source_deal_id:String(deal.id),...required,website:company.domain?`https://${company.domain}`:'',deal_name:deal.properties.dealname,value_cents:Math.round(Number(deal.properties.amount||0)*100),currency:'USD',service_template_key:'agency-growth',closed_won_at:new Date(deal.properties.closedate||deal.updatedAt).toISOString(),sla_hours:72};\nreturn [{json:{...normalized,payload_base64:Buffer.from(JSON.stringify(normalized)).toString('base64')}}];"
+      },
+      "id": "16b090e6-2f02-4b08-9769-3f480dfb2617",
+      "name": "Normalize Real HubSpot Deal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1890, 320]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT app.process_closed_won(convert_from(decode($1, 'base64'), 'UTF8')::jsonb) AS result;",
+        "options": {"queryReplacement": "={{ $json.payload_base64 }}"}
+      },
+      "id": "0df07067-a313-4104-b2e7-008496093470",
+      "name": "Create Onboarding Idempotently",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [2140, 320],
+      "credentials": {
+        "postgres": {"id": "pWvncY5EEynulaOP", "name": "Postgres account"}
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Five Minutes": {"main": [[{"node": "Fetch HubSpot Deals", "type": "main", "index": 0}]]},
+    "Run Poller Now": {"main": [[{"node": "Fetch HubSpot Deals", "type": "main", "index": 0}]]},
+    "Fetch HubSpot Deals": {"main": [[{"node": "Split Deals", "type": "main", "index": 0}]]},
+    "Split Deals": {"main": [[{"node": "Select Complete Closed-Won Deals", "type": "main", "index": 0}]]},
+    "Select Complete Closed-Won Deals": {"main": [[{"node": "Fetch Primary Contact", "type": "main", "index": 0}]]},
+    "Fetch Primary Contact": {"main": [[{"node": "Fetch Company", "type": "main", "index": 0}]]},
+    "Fetch Company": {"main": [[{"node": "Fetch Deal Owner", "type": "main", "index": 0}]]},
+    "Fetch Deal Owner": {"main": [[{"node": "Normalize Real HubSpot Deal", "type": "main", "index": 0}]]},
+    "Normalize Real HubSpot Deal": {"main": [[{"node": "Create Onboarding Idempotently", "type": "main", "index": 0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq"},
+  "versionId": "f36c08cb-2bdd-4e50-8c43-95e81eb92334",
+  "meta": {"templateCredsSetupCompleted": true},
+  "tags": []
+}
