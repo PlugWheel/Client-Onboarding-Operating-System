@@ -8,8 +8,8 @@ Client Onboarding OS coordinates commercial validation, workspace provisioning, 
 
 The complete lifecycle runs locally through n8n and PostgreSQL. Real HubSpot sandbox deals enter
 the system through an idempotent five-minute poller, and real Stripe sandbox PaymentIntents update
-the commercial deposit gate through the Stripe CLI relay. Contract signing is moving from
-PandaDoc to DocuSign; ClickUp, Google Drive, Slack, Calendly, and email delivery remain simulated
+the commercial deposit gate through the Stripe CLI relay. DocuSign demo OAuth, template-driven
+envelope sending, and completion polling provide the contract gate. ClickUp, Google Drive, Slack, Calendly, and email delivery remain simulated
 until their credentials are connected. The interface labels simulated steps explicitly.
 
 Working lifecycle:
@@ -89,7 +89,10 @@ curl -X POST http://localhost:5678/webhook/stripe-payment-event \
   -H 'Content-Type: application/json' \
   --data-binary @automation/fixtures/stripe-payment-succeeded.json
 
-curl -X POST http://localhost:5678/webhook/pandadoc-contract-event \
+curl -X POST http://localhost:5678/webhook/docusign-send-contract \
   -H 'Content-Type: application/json' \
-  --data-binary @automation/fixtures/pandadoc-contract-completed.json
+  -d '{"onboarding_id":"YOUR_ONBOARDING_UUID"}'
+
+# After the signer completes the envelope, run the poller immediately:
+curl http://localhost:5678/webhook/docusign-contract-poller
 ```

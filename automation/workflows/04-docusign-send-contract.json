@@ -1,0 +1,99 @@
+{
+  "id": "DocuSignSend001",
+  "name": "04 — Commercial — Send DocuSign Contract",
+  "nodes": [
+    {
+      "parameters": {"httpMethod":"POST","path":"docusign-send-contract","responseMode":"responseNode","options":{}},
+      "id": "98b472ea-91a1-48be-8f86-41fc32fb3e83",
+      "name": "Send Contract Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [180,300],
+      "webhookId": "c5e58172-f827-4b07-a59b-c66bb2553dbe"
+    },
+    {
+      "parameters": {"jsCode":"const body=$json.body??$json; const id=String(body.onboarding_id??''); if(!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Valid onboarding_id is required'); return [{json:{onboarding_id:id}}];"},
+      "id": "a94029b0-9c02-41ab-aa94-aa809eb7da9a",
+      "name": "Validate Onboarding",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420,300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT o.id AS onboarding_id,c.primary_contact_name,c.primary_contact_email,d.source_deal_id,ic.configuration->>'account_id' AS account_id,ic.configuration->>'base_uri' AS base_uri,ic.configuration->>'template_id' AS template_id,ce.envelope_id AS existing_envelope_id,ce.status AS existing_status FROM app.onboardings o JOIN app.clients c ON c.id=o.client_id JOIN app.deals d ON d.id=o.deal_id JOIN app.integration_connections ic ON ic.provider='docusign' LEFT JOIN app.contract_envelopes ce ON ce.onboarding_id=o.id WHERE o.id=$1::uuid AND ic.health='healthy';",
+        "options": {"queryReplacement":"={{ $json.onboarding_id }}"}
+      },
+      "id": "1b61cc88-1268-460e-a036-4ba7e172605f",
+      "name": "Load Contract Context",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [660,300],
+      "alwaysOutputData": true,
+      "credentials": {"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters": {"jsCode":"if(!$json.onboarding_id) throw new Error('Onboarding not found or DocuSign connection is not healthy'); if($json.existing_envelope_id) throw new Error(`A DocuSign envelope already exists (${ $json.existing_status }): ${$json.existing_envelope_id}`); const payload={templateId:$json.template_id,templateRoles:[{email:$json.primary_contact_email,name:$json.primary_contact_name,roleName:'Client'}],emailSubject:'Please sign your client onboarding agreement',emailBlurb:'Please review and sign this agreement so we can continue your onboarding.',customFields:{textCustomFields:[{name:'onboarding_id',value:String($json.onboarding_id),show:'false',required:'false'},{name:'source_deal_id',value:String($json.source_deal_id),show:'false',required:'false'}]},status:'sent'}; return [{json:{...$json,request_body:payload}}];"},
+      "id": "2cfac9af-a322-43a0-9e51-3edb3cfaac0d",
+      "name": "Build Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900,300]
+    },
+    {
+      "parameters": {
+        "authentication":"predefinedCredentialType",
+        "nodeCredentialType":"oAuth2Api",
+        "method":"POST",
+        "url":"={{ $json.base_uri + '/restapi/v2.1/accounts/' + $json.account_id + '/envelopes' }}",
+        "sendBody":true,
+        "contentType":"raw",
+        "rawContentType":"application/json",
+        "body":"={{ JSON.stringify($json.request_body) }}",
+        "options":{}
+      },
+      "id": "89271bd4-ce83-4a8e-91c4-7dfc027119ab",
+      "name": "Send DocuSign Envelope",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1140,300],
+      "credentials": {"oAuth2Api":{"id":"B73J9xYZ1dA3g0lF","name":"DocuSign Demo — Client Onboarding OS"}}
+    },
+    {
+      "parameters": {
+        "operation":"executeQuery",
+        "query":"INSERT INTO app.contract_envelopes(onboarding_id,envelope_id,template_id,status,recipient_email,sent_at,last_checked_at) VALUES ($1::uuid,$2,$3,$4,$5,now(),now()) RETURNING onboarding_id,envelope_id,status,sent_at;",
+        "options":{"queryReplacement":"={{ [ $('Build Envelope').item.json.onboarding_id, $json.envelopeId, $('Build Envelope').item.json.template_id, $json.status, $('Build Envelope').item.json.primary_contact_email ] }}"}
+      },
+      "id": "c01d031b-9f1a-4844-b09b-588961d78c40",
+      "name": "Record Envelope",
+      "type":"n8n-nodes-base.postgres",
+      "typeVersion":2.6,
+      "position":[1380,300],
+      "credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters":{"respondWith":"json","responseBody":"={{ {ok:true,provider:'DocuSign',onboarding_id:$json.onboarding_id,envelope_id:$json.envelope_id,status:$json.status,sent_at:$json.sent_at} }}","options":{"responseCode":201}},
+      "id":"f9825112-48a2-4584-b048-648385503366",
+      "name":"Return Sent Envelope",
+      "type":"n8n-nodes-base.respondToWebhook",
+      "typeVersion":1.4,
+      "position":[1620,300]
+    }
+  ],
+  "pinData":{},
+  "connections":{
+    "Send Contract Request":{"main":[[{"node":"Validate Onboarding","type":"main","index":0}]]},
+    "Validate Onboarding":{"main":[[{"node":"Load Contract Context","type":"main","index":0}]]},
+    "Load Contract Context":{"main":[[{"node":"Build Envelope","type":"main","index":0}]]},
+    "Build Envelope":{"main":[[{"node":"Send DocuSign Envelope","type":"main","index":0}]]},
+    "Send DocuSign Envelope":{"main":[[{"node":"Record Envelope","type":"main","index":0}]]},
+    "Record Envelope":{"main":[[{"node":"Return Sent Envelope","type":"main","index":0}]]}
+  },
+  "active":false,
+  "settings":{"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},
+  "versionId":"10de18d5-4e7f-44fa-9dde-af5980e624eb",
+  "meta":{"templateCredsSetupCompleted":true},
+  "tags":[]
+}

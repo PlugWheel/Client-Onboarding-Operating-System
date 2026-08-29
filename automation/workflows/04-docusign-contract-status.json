@@ -1,0 +1,90 @@
+{
+  "id":"DocuSignPoll001",
+  "name":"04 — Commercial — DocuSign Contract Status",
+  "nodes":[
+    {
+      "parameters":{"rule":{"interval":[{"field":"minutes","minutesInterval":5}]}},
+      "id":"f504cc96-9b5f-42da-a72d-d2856265f191",
+      "name":"Every Five Minutes",
+      "type":"n8n-nodes-base.scheduleTrigger",
+      "typeVersion":1.2,
+      "position":[180,220]
+    },
+    {
+      "parameters":{"path":"docusign-contract-poller","options":{}},
+      "id":"c6e16873-1581-457a-aa35-5830be741a5e",
+      "name":"Run Poller Now",
+      "type":"n8n-nodes-base.webhook",
+      "typeVersion":2.1,
+      "position":[180,420],
+      "webhookId":"ed024d68-a0e4-4538-bea6-2427172bdbe7"
+    },
+    {
+      "parameters":{"operation":"executeQuery","query":"SELECT ce.onboarding_id,ce.envelope_id,d.source_deal_id,ic.configuration->>'account_id' AS account_id,ic.configuration->>'base_uri' AS base_uri FROM app.contract_envelopes ce JOIN app.onboardings o ON o.id=ce.onboarding_id JOIN app.deals d ON d.id=o.deal_id JOIN app.integration_connections ic ON ic.provider='docusign' WHERE ce.status NOT IN ('completed','declined','voided') AND ic.health='healthy' ORDER BY coalesce(ce.last_checked_at,ce.created_at) ASC LIMIT 100;","options":{}},
+      "id":"92a7991d-c8f0-4909-aaea-42fc95f414cb",
+      "name":"Load Open Envelopes",
+      "type":"n8n-nodes-base.postgres",
+      "typeVersion":2.6,
+      "position":[430,320],
+      "credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters":{"authentication":"predefinedCredentialType","nodeCredentialType":"oAuth2Api","url":"={{ $json.base_uri + '/restapi/v2.1/accounts/' + $json.account_id + '/envelopes/' + $json.envelope_id }}","options":{}},
+      "id":"6b7c3547-c043-4697-8a42-694a8d893ad3",
+      "name":"Read Envelope Status",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.4,
+      "position":[680,320],
+      "credentials":{"oAuth2Api":{"id":"B73J9xYZ1dA3g0lF","name":"DocuSign Demo — Client Onboarding OS"}}
+    },
+    {
+      "parameters":{"jsCode":"const source=$('Load Open Envelopes').item.json; const status=String($json.status??'').toLowerCase(); const terminal=['completed','declined','voided'].includes(status); const normalized={provider:'docusign',event_id:`docusign:${source.envelope_id}:${status}`,event_type:`envelope.${status}`,onboarding_id:String(source.onboarding_id),source_deal_id:String(source.source_deal_id),requirement_key:'contract',result:status==='completed'?'signed':status==='declined'||status==='voided'?'rejected':'pending',external_object_id:String(source.envelope_id)}; return [{json:{...source,status,terminal,completed_at:$json.completedDateTime??null,event_payload_base64:Buffer.from(JSON.stringify(normalized)).toString('base64')}}];"},
+      "id":"25563aa0-5244-4761-b74a-f3a0bfe1e8fd",
+      "name":"Normalize Envelope Status",
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[920,320]
+    },
+    {
+      "parameters":{"operation":"executeQuery","query":"UPDATE app.contract_envelopes SET status=$2,completed_at=CASE WHEN $2='completed' THEN coalesce($3::timestamptz,now()) ELSE completed_at END,last_checked_at=now(),updated_at=now() WHERE envelope_id=$1 RETURNING onboarding_id,envelope_id,status;","options":{"queryReplacement":"={{ [ $json.envelope_id, $json.status, $json.completed_at ] }}"}},
+      "id":"21b1d1af-c71a-4e37-9205-3c720efb3c70",
+      "name":"Update Envelope",
+      "type":"n8n-nodes-base.postgres",
+      "typeVersion":2.6,
+      "position":[1160,320],
+      "credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters":{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":2},"conditions":[{"id":"d0494092-321d-46e2-a614-c7b3497632b9","leftValue":"={{ $('Normalize Envelope Status').item.json.terminal }}","rightValue":true,"operator":{"type":"boolean","operation":"true","singleValue":true}}],"combinator":"and"},"options":{}},
+      "id":"cbe36a0d-9514-4194-a60f-4c9e41f865d2",
+      "name":"Is Terminal Status",
+      "type":"n8n-nodes-base.if",
+      "typeVersion":2.2,
+      "position":[1400,320]
+    },
+    {
+      "parameters":{"operation":"executeQuery","query":"SELECT app.process_commercial_event(convert_from(decode($1,'base64'),'UTF8')::jsonb) AS result;","options":{"queryReplacement":"={{ $('Normalize Envelope Status').item.json.event_payload_base64 }}"}},
+      "id":"2db38154-cb63-4fbf-b3ce-c10ec57bb682",
+      "name":"Apply Contract Result",
+      "type":"n8n-nodes-base.postgres",
+      "typeVersion":2.6,
+      "position":[1650,240],
+      "credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    }
+  ],
+  "pinData":{},
+  "connections":{
+    "Every Five Minutes":{"main":[[{"node":"Load Open Envelopes","type":"main","index":0}]]},
+    "Run Poller Now":{"main":[[{"node":"Load Open Envelopes","type":"main","index":0}]]},
+    "Load Open Envelopes":{"main":[[{"node":"Read Envelope Status","type":"main","index":0}]]},
+    "Read Envelope Status":{"main":[[{"node":"Normalize Envelope Status","type":"main","index":0}]]},
+    "Normalize Envelope Status":{"main":[[{"node":"Update Envelope","type":"main","index":0}]]},
+    "Update Envelope":{"main":[[{"node":"Is Terminal Status","type":"main","index":0}]]},
+    "Is Terminal Status":{"main":[[{"node":"Apply Contract Result","type":"main","index":0}],[]]}
+  },
+  "active":false,
+  "settings":{"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},
+  "versionId":"7670ae73-b6df-4c66-ad68-81dd1eef3451",
+  "meta":{"templateCredsSetupCompleted":true},
+  "tags":[]
+}

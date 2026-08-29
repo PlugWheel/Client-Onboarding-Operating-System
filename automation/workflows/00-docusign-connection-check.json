@@ -1,0 +1,106 @@
+{
+  "id": "DocuSignHealth01",
+  "name": "00 — Health — DocuSign Connection",
+  "nodes": [
+    {
+      "parameters": {"path": "health/docusign", "responseMode": "responseNode", "options": {}},
+      "id": "a7b7ae13-f05c-48b4-82e4-e2d7541faed4",
+      "name": "Run DocuSign Check",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [220, 320],
+      "webhookId": "b1af23fe-dbcf-4011-becf-fbb7b8d4e05a"
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "oAuth2Api",
+        "url": "https://account-d.docusign.com/oauth/userinfo",
+        "options": {}
+      },
+      "id": "243e33f0-cd36-4460-a095-e14ca58de3f9",
+      "name": "Verify DocuSign OAuth",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [480, 320],
+      "credentials": {
+        "oAuth2Api": {"id": "B73J9xYZ1dA3g0lF", "name": "DocuSign Demo — Client Onboarding OS"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const accounts=$json.accounts??[];\nconst account=accounts.find(a=>a.is_default)||accounts[0];\nif(!account?.account_id||!account?.base_uri) throw new Error('DocuSign OAuth succeeded but no demo account was returned');\nif(!String(account.base_uri).includes('docusign.net')) throw new Error(`Unexpected DocuSign base URI: ${account.base_uri}`);\nconst config={account_id:String(account.account_id),account_name:String(account.account_name??''),base_uri:String(account.base_uri)};\nreturn [{json:{...config,config_base64:Buffer.from(JSON.stringify(config)).toString('base64')}}];"
+      },
+      "id": "8e3f8b3d-8075-40e0-ad25-c8fa38f3cad0",
+      "name": "Select Demo Account",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [730, 320]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "oAuth2Api",
+        "url": "={{ $json.base_uri + '/restapi/v2.1/accounts/' + $json.account_id + '/templates?search_text=Client%20Onboarding%20Agreement&count=20' }}",
+        "options": {}
+      },
+      "id": "f1b9ae44-e93b-40df-a47e-967bd06ffcb0",
+      "name": "Find Agreement Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [970, 320],
+      "credentials": {
+        "oAuth2Api": {"id": "B73J9xYZ1dA3g0lF", "name": "DocuSign Demo — Client Onboarding OS"}
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const account=$('Select Demo Account').item.json;\nconst templates=$json.envelopeTemplates??[];\nconst template=templates.find(t=>t.name==='Client Onboarding Agreement')??templates[0];\nif(!template?.templateId) throw new Error('DocuSign template Client Onboarding Agreement was not found');\nconst config={account_id:account.account_id,account_name:account.account_name,base_uri:account.base_uri,template_id:String(template.templateId),template_name:String(template.name??'')};\nreturn [{json:{...config,config_base64:Buffer.from(JSON.stringify(config)).toString('base64')}}];"
+      },
+      "id": "927c28d1-1ba2-4017-9e12-05bcefd72a0b",
+      "name": "Select Agreement Template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1210, 320]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE app.integration_connections SET mode='sandbox',health='healthy',credential_name='DocuSign Demo — Client Onboarding OS',configuration=configuration || convert_from(decode($1,'base64'),'UTF8')::jsonb,last_checked_at=now(),last_error=NULL,updated_at=now() WHERE provider='docusign' RETURNING display_name,mode,health,last_checked_at;",
+        "options": {"queryReplacement": "={{ $json.config_base64 }}"}
+      },
+      "id": "c6bf3b71-7b5d-4c82-b2ad-66965ba5bfc3",
+      "name": "Mark DocuSign Healthy",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1450, 320],
+      "credentials": {"postgres": {"id": "pWvncY5EEynulaOP", "name": "Postgres account"}}
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {ok:true,provider:$json.display_name,mode:$json.mode,health:$json.health,checked_at:$json.last_checked_at,message:'DocuSign demo OAuth verified.'} }}",
+        "options": {"responseCode": 200}
+      },
+      "id": "75d43f32-d841-431d-98e2-3bf51f9df91e",
+      "name": "Return DocuSign Health",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1690, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run DocuSign Check": {"main": [[{"node":"Verify DocuSign OAuth","type":"main","index":0}]]},
+    "Verify DocuSign OAuth": {"main": [[{"node":"Select Demo Account","type":"main","index":0}]]},
+    "Select Demo Account": {"main": [[{"node":"Find Agreement Template","type":"main","index":0}]]},
+    "Find Agreement Template": {"main": [[{"node":"Select Agreement Template","type":"main","index":0}]]},
+    "Select Agreement Template": {"main": [[{"node":"Mark DocuSign Healthy","type":"main","index":0}]]},
+    "Mark DocuSign Healthy": {"main": [[{"node":"Return DocuSign Health","type":"main","index":0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},
+  "versionId": "fbff9c88-5c0c-494f-bff5-cab6d18f7c16",
+  "meta": {"templateCredsSetupCompleted":true},
+  "tags": []
+}
