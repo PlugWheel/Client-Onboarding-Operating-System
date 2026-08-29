@@ -11,7 +11,8 @@ the system through an idempotent five-minute poller, and real Stripe sandbox Pay
 the commercial deposit gate through the Stripe CLI relay. DocuSign demo OAuth, template-driven
 envelope sending, and completion polling provide the contract gate. Real ClickUp project/task,
 Google Drive folder-tree, and Slack channel/message provisioning are connected with persistent
-resource tracking and recovery. Calendly and email delivery remain simulated.
+resource tracking and recovery. Gmail sends tracked intake invitations and missing-item reminders.
+Calendly remains simulated.
 
 Working lifecycle:
 
