@@ -1,0 +1,93 @@
+{
+  "id": "SlackIntake0001",
+  "name": "01A | Slack Intake | Create Client Onboarding",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "slack-onboard-client",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "97398bde-4b99-42a3-94eb-b5e3bfab4c8a",
+      "name": "Slack Slash Command",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [180, 300],
+      "webhookId": "598b1714-5f34-4378-b403-1cd298316d74"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nconst text = String(body.text ?? '').trim();\nconst parts = text.split('|').map((part) => part.trim());\nconst usage = 'Usage: /onboard-client Company | Contact Name | contact@email.com | Engagement | Amount | Owner Name | owner@email.com';\nif (parts.length !== 7 || parts.some((part) => !part)) {\n  return [{ json: { valid: false, slack_response: { response_type: 'ephemeral', text: `I could not create the onboarding. ${usage}` } } }];\n}\nconst [companyName, contactName, contactEmail, dealName, rawAmount, ownerName, ownerEmail] = parts;\nconst amount = Number(rawAmount.replace(/[^0-9.-]/g, ''));\nconst emailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nif (!emailPattern.test(contactEmail) || !emailPattern.test(ownerEmail) || !Number.isFinite(amount) || amount < 0) {\n  return [{ json: { valid: false, slack_response: { response_type: 'ephemeral', text: `Please provide valid contact and owner emails and a non-negative amount. ${usage}` } } }];\n}\nconst stableKey = `${contactEmail}:${dealName}`.toLowerCase().replace(/[^a-z0-9@._:-]+/g, '-');\nconst sourceDealId = `slack:${body.team_id ?? 'workspace'}:${stableKey}`;\nconst normalized = {\n  event_id: String(body.trigger_id ?? sourceDealId),\n  source_deal_id: sourceDealId,\n  company_name: companyName,\n  primary_contact_name: contactName,\n  primary_contact_email: contactEmail,\n  deal_name: dealName,\n  owner_name: ownerName,\n  owner_email: ownerEmail,\n  website: '',\n  value_cents: Math.round(amount * 100),\n  currency: 'USD',\n  service_template_key: 'consulting-standard',\n  closed_won_at: new Date().toISOString(),\n  sla_hours: 72,\n  source: 'slack',\n  slack_user_id: String(body.user_id ?? ''),\n  slack_channel_id: String(body.channel_id ?? '')\n};\nreturn [{ json: { valid: true, company_name: companyName, deal_name: dealName, payload_base64: Buffer.from(JSON.stringify(normalized)).toString('base64') } }];"
+      },
+      "id": "5166877a-94ce-43d8-95b7-fb1398fd5849",
+      "name": "Validate Slack Client",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [{ "id": "92af5a62-415f-420a-a947-84352bb3d836", "leftValue": "={{ $json.valid }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "27310c10-690b-4f93-80e6-c97b067416d2",
+      "name": "Client Input Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT app.process_closed_won(convert_from(decode($1, 'base64'), 'UTF8')::jsonb) AS result;",
+        "options": { "queryReplacement": "={{ $json.payload_base64 }}" }
+      },
+      "id": "969e42ba-d4e8-4dfb-b168-fec6d23f1348",
+      "name": "Create Onboarding Atomically",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [890, 220],
+      "credentials": { "postgres": { "id": "pWvncY5EEynulaOP", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $json.result ?? {};\nreturn [{ json: { slack_response: { response_type: 'ephemeral', text: `✅ Client onboarding created successfully.\\n*Status:* Received\\n*Onboarding ID:* ${result.onboarding_id ?? result.id ?? 'created'}\\n*Next:* Confirm the agreement and deposit, then provision the delivery workspace.` } } }];"
+      },
+      "id": "5b93465e-d48c-4331-9740-c00c0e976230",
+      "name": "Build Slack Confirmation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1110, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.slack_response }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "1f5be08a-b521-4607-bfff-acde6520eaba",
+      "name": "Reply Privately in Slack",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1340, 300]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Slack Slash Command": { "main": [[{ "node": "Validate Slack Client", "type": "main", "index": 0 }]] },
+    "Validate Slack Client": { "main": [[{ "node": "Client Input Valid", "type": "main", "index": 0 }]] },
+    "Client Input Valid": { "main": [[{ "node": "Create Onboarding Atomically", "type": "main", "index": 0 }], [{ "node": "Reply Privately in Slack", "type": "main", "index": 0 }]] },
+    "Create Onboarding Atomically": { "main": [[{ "node": "Build Slack Confirmation", "type": "main", "index": 0 }]] },
+    "Build Slack Confirmation": { "main": [[{ "node": "Reply Privately in Slack", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq" },
+  "versionId": "9a553bc4-ab09-49cc-ac79-ff9636cc3f2a",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}

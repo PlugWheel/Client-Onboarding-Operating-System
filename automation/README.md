@@ -6,6 +6,7 @@ Current workflows are named for the business outcome they produce:
 
 - `00 | Connection Check | Provider`: verifies each configured provider before a showcase or production run (HubSpot, Stripe, DocuSign, ClickUp, Google Drive, Slack, Gmail, and Calendly).
 - `01 | Sales Handoff | Receive Closed-Won Deal`: validates a HubSpot-compatible closed-won event and creates the onboarding record.
+- `01A | Slack Intake | Create Client Onboarding`: accepts a structured `/onboard-client` command and creates the onboarding record directly from Slack.
 - `02 | Sales Handoff | Sync HubSpot Closed-Won Deals`: polls HubSpot for newly won deals when webhooks are unavailable.
 - `03 | Commercial Gate | Record Stripe Payment`: records deposit success or failure and reevaluates readiness.
 - `04A | Commercial Gate | Send DocuSign Agreement`: sends the onboarding agreement for signature.
