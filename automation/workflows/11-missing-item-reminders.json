@@ -1,5 +1,5 @@
 {
-  "id":"ReminderCycle01","name":"11 — Intake — Missing-Item Reminder Cycle",
+  "id":"ReminderCycle01","name":"11 | Client Intake | Send Missing-Item Reminders",
   "nodes":[
     {"parameters":{"rule":{"interval":[{"field":"hours","hoursInterval":1}]}},"id":"a46723fc-8497-42b8-a976-f789fc877b46","name":"Every Hour","type":"n8n-nodes-base.scheduleTrigger","typeVersion":1.2,"position":[160,240]},
     {"parameters":{"path":"run-intake-reminders","options":{}},"id":"d2e97069-87cc-42e0-b269-9cb1f1b270b0","name":"Run Reminders Now","type":"n8n-nodes-base.webhook","typeVersion":2.1,"position":[160,400],"webhookId":"92fb24ce-55bb-4881-b7d9-2e45802012c5"},

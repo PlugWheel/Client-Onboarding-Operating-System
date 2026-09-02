@@ -1,6 +1,6 @@
 {
   "id":"DocuSignPoll001",
-  "name":"04 — Commercial — DocuSign Contract Status",
+  "name":"04B | Commercial Gate | Check DocuSign Agreement",
   "nodes":[
     {
       "parameters":{"rule":{"interval":[{"field":"minutes","minutesInterval":5}]}},

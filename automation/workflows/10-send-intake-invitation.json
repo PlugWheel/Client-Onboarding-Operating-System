@@ -1,5 +1,5 @@
 {
-  "id":"SendIntakeInvite1","name":"10 — Intake — Send Questionnaire",
+  "id":"SendIntakeInvite1","name":"10 | Client Intake | Send Questionnaire Email",
   "nodes":[
     {"parameters":{"httpMethod":"POST","path":"send-intake-invitation","responseMode":"responseNode","options":{}},"id":"57977cc3-d7d7-4fab-9024-fbb20f62cf9c","name":"Invitation Request","type":"n8n-nodes-base.webhook","typeVersion":2.1,"position":[160,300],"webhookId":"905f36d5-8c19-4213-a72e-d67ac282003a"},
     {"parameters":{"jsCode":"const body=$json.body??$json;const id=String(body.onboarding_id??'');if(!/^[0-9a-f-]{36}$/i.test(id))throw new Error('Valid onboarding_id is required');return[{json:{onboarding_id:id}}];"},"id":"fb66ff8f-d517-4775-83a5-e7208ba50d2b","name":"Validate Invitation","type":"n8n-nodes-base.code","typeVersion":2,"position":[390,300]},

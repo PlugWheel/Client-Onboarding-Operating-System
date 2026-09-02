@@ -1,6 +1,6 @@
 {
   "id":"GoogleDriveHealth1",
-  "name":"00 — Health — Google Drive Connection",
+  "name":"00 | Connection Check | Google Drive",
   "nodes":[
     {
       "parameters":{"path":"health-google-drive","responseMode":"responseNode","options":{}},

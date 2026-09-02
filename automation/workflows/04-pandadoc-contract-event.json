@@ -1,6 +1,6 @@
 {
   "id": "PandaContract001",
-  "name": "04 — Commercial — PandaDoc Contract Event",
+  "name": "04Z | Legacy Adapter | Receive PandaDoc Contract Event",
   "nodes": [
     {
       "parameters": { "httpMethod": "POST", "path": "pandadoc-contract-event", "responseMode": "responseNode", "options": {} },

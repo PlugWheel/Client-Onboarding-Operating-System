@@ -1,5 +1,5 @@
 {
-  "id":"CalendlyPoller01","name":"12 — Kickoff — Calendly Booking Poller",
+  "id":"CalendlyPoller01","name":"12C | Kickoff | Sync Calendly Bookings",
   "nodes":[
     {"parameters":{"rule":{"interval":[{"field":"minutes","minutesInterval":5}]}},"id":"5e4c6054-7153-4c6b-a13c-4b41f34779fd","name":"Every Five Minutes","type":"n8n-nodes-base.scheduleTrigger","typeVersion":1.2,"position":[140,220]},
     {"parameters":{"path":"calendly-booking-poller","options":{}},"id":"7bca61b5-d5f8-4ba5-8954-c32e7b6b7c73","name":"Run Poller Now","type":"n8n-nodes-base.webhook","typeVersion":2.1,"position":[140,400],"webhookId":"9255088f-befe-44bd-b643-95e12fb99170"},

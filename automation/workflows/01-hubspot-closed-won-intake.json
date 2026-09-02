@@ -1,6 +1,6 @@
 {
   "id": "HSPClosedWon0001",
-  "name": "01 — Intake — HubSpot Closed-Won",
+  "name": "01 | Sales Handoff | Receive Closed-Won Deal",
   "nodes": [
     {
       "parameters": {

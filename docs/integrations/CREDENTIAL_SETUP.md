@@ -126,7 +126,7 @@ Report:
 - Reply-to address
 # Credential verification
 
-After saving the HubSpot credential in n8n, run `00 — Health — HubSpot Connection` or open
+After saving the HubSpot credential in n8n, run `00 | Connection Check | HubSpot` or open
 `http://localhost:5678/webhook/health/hubspot`. A successful check verifies read-only deal access
 and marks HubSpot as healthy in the dashboard integration registry. It does not expose or persist
 the service key outside n8n's encrypted credential store.

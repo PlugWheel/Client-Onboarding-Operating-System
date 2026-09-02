@@ -104,7 +104,7 @@ curl http://localhost:5678/healthz
 curl -I http://localhost:3000
 ```
 
-Provider health workflows are available in n8n with the prefix `00 — Health`.
+Provider health workflows are available in n8n with the prefix `00 | Connection Check`.
 
 ## Safe demo rules
 

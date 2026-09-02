@@ -1,6 +1,6 @@
 {
   "id": "DocuSignHealth01",
-  "name": "00 — Health — DocuSign Connection",
+  "name": "00 | Connection Check | DocuSign",
   "nodes": [
     {
       "parameters": {"path": "health/docusign", "responseMode": "responseNode", "options": {}},

@@ -1,5 +1,5 @@
 {
-  "name": "99 — Operations — Global Error Handler",
+  "name": "99 | Operations | Handle Workflow Errors",
   "nodes": [
     {
       "parameters": {},

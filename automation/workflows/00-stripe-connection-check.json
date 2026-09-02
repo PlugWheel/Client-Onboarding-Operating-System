@@ -1,6 +1,6 @@
 {
   "id": "StripeHealth001",
-  "name": "00 — Health — Stripe Connection",
+  "name": "00 | Connection Check | Stripe",
   "nodes": [
     {
       "parameters": {"path": "health/stripe", "responseMode": "responseNode", "options": {}},

@@ -1,6 +1,6 @@
 {
   "id": "HubSpotHealth001",
-  "name": "00 — Health — HubSpot Connection",
+  "name": "00 | Connection Check | HubSpot",
   "nodes": [
     {
       "parameters": {

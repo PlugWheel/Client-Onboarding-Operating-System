@@ -1,6 +1,6 @@
 {
   "id": "KickoffEvent001",
-  "name": "12 — Kickoff — Calendly Booking Event",
+  "name": "12B | Kickoff | Receive Calendly Booking",
   "nodes": [
     { "parameters": { "httpMethod": "POST", "path": "calendly-kickoff-event", "responseMode": "responseNode", "options": {} }, "id": "f0c5529a-a81d-469c-93aa-eb671d7dc7b4", "name": "Calendly Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [220, 320], "webhookId": "c87bf570-7823-486d-8b3c-455b4595cb66" },
     { "parameters": { "jsCode": "const body=$json.body??$json; const id=String(body.onboarding_id??body.payload?.tracking?.utm_content??''); const eventId=String(body.event_id??body.id??''); const startsAt=String(body.starts_at??body.payload?.event?.start_time??''); const url=String(body.meeting_url??body.payload?.event?.location?.join_url??''); if(!/^[0-9a-f-]{36}$/i.test(id)||!eventId||!startsAt) throw new Error('onboarding_id, event_id, and starts_at are required'); const payload={onboarding_id:id,event_id:eventId,starts_at:startsAt,meeting_url:url}; return [{json:{...payload,payload_base64:Buffer.from(JSON.stringify(payload)).toString('base64')}}];" }, "id": "be5c2e34-0aa7-4898-bdb0-e05614aa83a0", "name": "Normalize Booking", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [470, 320] },

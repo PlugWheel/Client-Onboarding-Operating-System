@@ -1,5 +1,5 @@
 {
-  "id":"SlaMonitor00001","name":"14 — Operations — SLA Monitor and Escalation","nodes":[
+  "id":"SlaMonitor00001","name":"14 | Operations | Monitor SLA & Escalate","nodes":[
     {"parameters":{"rule":{"interval":[{"field":"hours","hoursInterval":1}]}},"id":"62620de4-ef25-4978-a99b-f887da2eeacf","name":"Every Hour","type":"n8n-nodes-base.scheduleTrigger","typeVersion":1.2,"position":[260,300]},
     {"parameters":{"operation":"executeQuery","query":"SELECT app.run_sla_monitor() AS result;","options":{}},"id":"b88b41a8-1c0c-4296-970b-00ee36735b36","name":"Escalate SLA Breaches","type":"n8n-nodes-base.postgres","typeVersion":2.6,"position":[510,300],"credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}}
   ],"pinData":{},"connections":{"Every Hour":{"main":[[{"node":"Escalate SLA Breaches","type":"main","index":0}]]}},"active":false,"settings":{"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},"versionId":"0c1640e7-23bd-4f11-9e6d-86316896228e","meta":{"templateCredsSetupCompleted":true},"tags":[]

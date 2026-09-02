@@ -1,6 +1,6 @@
 {
   "id": "StripePayment001",
-  "name": "03 — Commercial — Stripe Payment Event",
+  "name": "03 | Commercial Gate | Record Stripe Payment",
   "nodes": [
     {
       "parameters": { "httpMethod": "POST", "path": "stripe-payment-event", "responseMode": "responseNode", "options": {} },

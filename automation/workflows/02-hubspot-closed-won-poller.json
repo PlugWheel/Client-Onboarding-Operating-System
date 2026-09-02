@@ -1,6 +1,6 @@
 {
   "id": "HubSpotPoller001",
-  "name": "02 — Intake — HubSpot Closed-Won Poller",
+  "name": "02 | Sales Handoff | Sync HubSpot Closed-Won Deals",
   "nodes": [
     {
       "parameters": {

@@ -1,5 +1,5 @@
 {
-  "id":"CalendlyHealth01","name":"00 — Health — Calendly Connection",
+  "id":"CalendlyHealth01","name":"00 | Connection Check | Calendly",
   "nodes":[
     {"parameters":{"path":"health-calendly","responseMode":"responseNode","options":{}},"id":"9fbfb1d0-8508-4af4-aaee-2fc86ec1ff70","name":"Run Calendly Check","type":"n8n-nodes-base.webhook","typeVersion":2.1,"position":[160,300],"webhookId":"1112e4d7-a33c-41b6-90e2-1cc547bf5213"},
     {"parameters":{"authentication":"predefinedCredentialType","nodeCredentialType":"calendlyApi","url":"https://api.calendly.com/users/me","options":{}},"id":"07e72c0c-e24e-4076-b16b-729cc90529ea","name":"Get Calendly User","type":"n8n-nodes-base.httpRequest","typeVersion":4.4,"position":[390,300],"credentials":{"calendlyApi":{"id":"IqJdgBrlUaGEAiYm","name":"Calendly Personal Access Token account"}}},

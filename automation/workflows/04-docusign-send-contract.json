@@ -1,6 +1,6 @@
 {
   "id": "DocuSignSend001",
-  "name": "04 — Commercial — Send DocuSign Contract",
+  "name": "04A | Commercial Gate | Send DocuSign Agreement",
   "nodes": [
     {
       "parameters": {"httpMethod":"POST","path":"docusign-send-contract","responseMode":"responseNode","options":{}},

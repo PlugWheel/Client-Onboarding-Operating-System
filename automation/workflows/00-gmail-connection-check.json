@@ -1,5 +1,5 @@
 {
-  "id":"GmailHealth0001","name":"00 — Health — Gmail Connection",
+  "id":"GmailHealth0001","name":"00 | Connection Check | Gmail",
   "nodes":[
     {"parameters":{"path":"health-gmail","responseMode":"responseNode","options":{}},"id":"d5e83418-c681-48df-a4a1-135c2999199c","name":"Run Gmail Check","type":"n8n-nodes-base.webhook","typeVersion":2.1,"position":[180,300],"webhookId":"8333ca1e-7568-44bd-998a-c2f4f209e945"},
     {"parameters":{"authentication":"predefinedCredentialType","nodeCredentialType":"gmailOAuth2","url":"https://gmail.googleapis.com/gmail/v1/users/me/profile","options":{}},"id":"b319c912-1ea1-45fe-aef2-6bc29ed2ab04","name":"Verify Gmail Account","type":"n8n-nodes-base.httpRequest","typeVersion":4.4,"position":[430,300],"credentials":{"gmailOAuth2":{"id":"rOfFrcEx7nfCI8ft","name":"Gmail account"}}},

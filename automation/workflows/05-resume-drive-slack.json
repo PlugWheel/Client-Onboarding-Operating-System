@@ -1,5 +1,5 @@
 {
-  "id":"ResumeDriveSlack1","name":"05 — Provisioning — Resume Drive and Slack",
+  "id":"ResumeDriveSlack1","name":"05B | Workspace Recovery | Resume Drive & Slack Setup",
   "nodes":[
     {"parameters":{"httpMethod":"POST","path":"resume-drive-slack","responseMode":"responseNode","options":{}},"id":"aa25fd1d-8867-480a-b17b-2050217bfef8","name":"Resume Request","type":"n8n-nodes-base.webhook","typeVersion":2.1,"position":[100,300],"webhookId":"6ed74e92-4485-4de6-9f77-814137d1dd71"},
     {"parameters":{"jsCode":"const body=$json.body??$json;const id=String(body.onboarding_id??'');if(!/^[0-9a-f-]{36}$/i.test(id))throw new Error('Valid onboarding_id is required');return[{json:{onboarding_id:id}}];"},"id":"e28360f3-fcfa-4390-8c99-e2729b5034bd","name":"Validate Resume","type":"n8n-nodes-base.code","typeVersion":2,"position":[330,300]},

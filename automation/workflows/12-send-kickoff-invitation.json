@@ -1,5 +1,5 @@
 {
-  "id":"KickoffInvite001","name":"12 — Kickoff — Send Calendly Invitation",
+  "id":"KickoffInvite001","name":"12A | Kickoff | Send Calendly Scheduling Email",
   "nodes":[
     {"parameters":{"httpMethod":"POST","path":"send-kickoff-invitation","responseMode":"responseNode","options":{}},"id":"56ed21b2-b4ac-4ead-a20c-1d51b595f775","name":"Kickoff Invitation Request","type":"n8n-nodes-base.webhook","typeVersion":2.1,"position":[160,300],"webhookId":"2011f640-f92b-4ae2-9965-628481e3c7f5"},
     {"parameters":{"jsCode":"const body=$json.body??$json;const id=String(body.onboarding_id??'');if(!/^[0-9a-f-]{36}$/i.test(id))throw new Error('Valid onboarding_id is required');return[{json:{onboarding_id:id}}];"},"id":"a85d447e-9bc2-4d98-a4e5-d0a06193f3b6","name":"Validate Kickoff Invitation","type":"n8n-nodes-base.code","typeVersion":2,"position":[390,300]},

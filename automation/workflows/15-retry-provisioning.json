@@ -1,6 +1,6 @@
 {
   "id": "RetryProvision01",
-  "name": "15 — Operations — Retry Provisioning Step",
+  "name": "15 | Operations | Retry Failed Provisioning",
   "nodes": [
     { "parameters": { "httpMethod": "POST", "path": "retry-provisioning", "responseMode": "responseNode", "options": {} }, "id": "a9c3a5eb-c465-4ef5-8025-c9ac5c05e2ed", "name": "Retry Request", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [220, 320], "webhookId": "15693a77-babf-4871-8f04-4fe0e2b31cd3" },
     { "parameters": { "jsCode": "const body=$json.body??$json; const id=String(body.onboarding_id??''); const provider=String(body.provider??''); if(!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Valid onboarding_id is required'); if(!['clickup','google_drive','slack'].includes(provider)) throw new Error('Valid failed provider is required'); const payload={onboarding_id:id,provider}; return [{json:{...payload,payload_base64:Buffer.from(JSON.stringify(payload)).toString('base64')}}];" }, "id": "4ccbc450-783e-48a0-afcc-b5c43c45682d", "name": "Validate Retry", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [470, 320] },

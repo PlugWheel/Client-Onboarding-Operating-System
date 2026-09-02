@@ -1,5 +1,5 @@
 {
-  "id":"ProvisionEnv0001","name":"05 — Provisioning — Create Delivery Environment",
+  "id":"ProvisionEnv0001","name":"05A | Workspace Setup | Create ClickUp, Drive & Slack",
   "nodes":[
     {"parameters":{"httpMethod":"POST","path":"provision-onboarding","responseMode":"responseNode","options":{}},"id":"bf53349a-eec5-4afb-a70e-6383193ec670","name":"Provisioning Request","type":"n8n-nodes-base.webhook","typeVersion":2.1,"position":[100,300],"webhookId":"105af151-9135-4e4a-b192-5585490c75f6"},
     {"parameters":{"jsCode":"const body=$json.body??$json;const id=String(body.onboarding_id??'');if(!/^[0-9a-f-]{36}$/i.test(id))throw new Error('Valid onboarding_id is required');return[{json:{onboarding_id:id}}];"},"id":"3180e2c4-a1f8-49da-b1dd-61ac7d91d488","name":"Validate Provisioning","type":"n8n-nodes-base.code","typeVersion":2,"position":[320,300]},

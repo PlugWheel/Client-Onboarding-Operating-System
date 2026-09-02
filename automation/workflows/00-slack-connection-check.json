@@ -1,6 +1,6 @@
 {
   "id":"SlackHealth0001",
-  "name":"00 — Health — Slack Connection",
+  "name":"00 | Connection Check | Slack",
   "nodes":[
     {
       "parameters":{"path":"health-slack","responseMode":"responseNode","options":{}},

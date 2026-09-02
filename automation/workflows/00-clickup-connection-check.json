@@ -1,6 +1,6 @@
 {
   "id":"ClickUpHealth001",
-  "name":"00 — Health — ClickUp Connection",
+  "name":"00 | Connection Check | ClickUp",
   "nodes":[
     {
       "parameters":{"path":"health-clickup","responseMode":"responseNode","options":{}},
