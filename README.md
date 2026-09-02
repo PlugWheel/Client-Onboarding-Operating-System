@@ -151,3 +151,5 @@ The portfolio build uses provider sandbox, demo, or test environments and runs l
 ## Case study
 
 Read [CASE_STUDY.md](CASE_STUDY.md) for the business problem, design decisions, end-to-end workflow, implementation evidence, reliability model, and portfolio narrative.
+
+For a repeatable client walkthrough, use [SHOWCASE_GUIDE.md](SHOWCASE_GUIDE.md).
