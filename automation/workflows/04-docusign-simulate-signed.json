@@ -1,0 +1,25 @@
+{
+  "id": "DocuSignSim0001",
+  "name": "04C | Commercial Gate | Simulate DocuSign Signed (Demo)",
+  "nodes": [
+    { "parameters": { "httpMethod": "POST", "path": "docusign-simulate-signed", "responseMode": "responseNode", "options": {} }, "id": "7c2f9a10-4b3e-4d5a-9a1e-1f6c8b2d4e01", "name": "Simulate Signed Webhook", "type": "n8n-nodes-base.webhook", "typeVersion": 2.1, "position": [220, 320], "webhookId": "7c2f9a10-4b3e-4d5a-9a1e-1f6c8b2d4e02" },
+    { "parameters": { "jsCode": "const body=$json.body??$json; const id=String(body.onboarding_id??''); if(!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Valid onboarding_id is required'); return [{json:{onboarding_id:id}}];" }, "id": "7c2f9a10-4b3e-4d5a-9a1e-1f6c8b2d4e03", "name": "Validate Simulate Request", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [450, 320] },
+    { "parameters": { "operation": "executeQuery", "query": "SELECT o.id AS onboarding_id, d.source_deal_id FROM app.onboardings o JOIN app.deals d ON d.id=o.deal_id WHERE o.id=$1::uuid;", "options": { "queryReplacement": "={{ $json.onboarding_id }}" } }, "id": "7c2f9a10-4b3e-4d5a-9a1e-1f6c8b2d4e04", "name": "Load Deal Context", "type": "n8n-nodes-base.postgres", "typeVersion": 2.6, "position": [680, 320], "alwaysOutputData": true, "credentials": { "postgres": { "id": "pWvncY5EEynulaOP", "name": "Postgres account" } } },
+    { "parameters": { "jsCode": "const source=$('Validate Simulate Request').item.json; const onboardingId=String($json.onboarding_id??source.onboarding_id??''); if(!onboardingId) throw new Error('Onboarding not found for simulated signature'); const normalized={provider:'docusign',event_id:`docusign:demo:${onboardingId}:${Date.now()}`,event_type:'envelope.completed',onboarding_id:onboardingId,source_deal_id:String($json.source_deal_id??''),requirement_key:'contract',result:'signed'}; return [{json:{...normalized,payload_base64:Buffer.from(JSON.stringify(normalized)).toString('base64')}}];" }, "id": "7c2f9a10-4b3e-4d5a-9a1e-1f6c8b2d4e05", "name": "Build Simulated Signed Event", "type": "n8n-nodes-base.code", "typeVersion": 2, "position": [910, 320] },
+    { "parameters": { "operation": "executeQuery", "query": "SELECT app.process_commercial_event(convert_from(decode($1,'base64'),'UTF8')::jsonb) AS result;", "options": { "queryReplacement": "={{ $json.payload_base64 }}" } }, "id": "7c2f9a10-4b3e-4d5a-9a1e-1f6c8b2d4e06", "name": "Apply Simulated Signature", "type": "n8n-nodes-base.postgres", "typeVersion": 2.6, "position": [1140, 320], "credentials": { "postgres": { "id": "pWvncY5EEynulaOP", "name": "Postgres account" } } },
+    { "parameters": { "respondWith": "json", "responseBody": "={{ {ok:true,...$json.result} }}", "options": { "responseCode": 200 } }, "id": "7c2f9a10-4b3e-4d5a-9a1e-1f6c8b2d4e07", "name": "Acknowledge Simulate", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.4, "position": [1370, 320] }
+  ],
+  "pinData": {},
+  "connections": {
+    "Simulate Signed Webhook": { "main": [[{ "node": "Validate Simulate Request", "type": "main", "index": 0 }]] },
+    "Validate Simulate Request": { "main": [[{ "node": "Load Deal Context", "type": "main", "index": 0 }]] },
+    "Load Deal Context": { "main": [[{ "node": "Build Simulated Signed Event", "type": "main", "index": 0 }]] },
+    "Build Simulated Signed Event": { "main": [[{ "node": "Apply Simulated Signature", "type": "main", "index": 0 }]] },
+    "Apply Simulated Signature": { "main": [[{ "node": "Acknowledge Simulate", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq" },
+  "versionId": "2f6a1c8e-9d3b-4a7f-8e2c-5b1d0a9f4c11",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}

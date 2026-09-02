@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, ArrowUpRight, Bell, BriefcaseBusiness, Check, ChevronDown, CircleHelp, Clock3, Command, FileCheck2, Filter, LayoutGrid, ListFilter, Rocket, Search, Settings2, Sparkles, Users, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowUpRight, Bell, BriefcaseBusiness, Check, ChevronDown, CircleHelp, Clock3, Command, FileCheck2, Filter, LayoutGrid, ListChecks, ListFilter, Rocket, Search, Settings2, Sparkles, Users, X } from "lucide-react";
 import { SiCalendly, SiClickup, SiGmail, SiGoogledrive, SiHubspot, SiN8N, SiPostgresql, SiStripe } from "react-icons/si";
 import { FaSlack } from "react-icons/fa6";
 import type { Onboarding } from "./data";
@@ -40,9 +40,13 @@ function ToolLogo({ tool }: { tool: JourneyTool }) {
   return <SiCalendly />;
 }
 
+function findRequirement(item: Onboarding, terms: string[]) {
+  return item.requirements.find((entry) => terms.some((term) => `${entry.key} ${entry.label}`.toLowerCase().includes(term)));
+}
+
 function getJourney(item: Onboarding): JourneyStep[] {
   const rank = stageRank[item.stage] ?? 0;
-  const requirement = (terms: string[]) => item.requirements.find((entry) => terms.some((term) => `${entry.key} ${entry.label}`.toLowerCase().includes(term)));
+  const requirement = (terms: string[]) => findRequirement(item, terms);
   const resource = (provider: string) => item.resources.find((entry) => entry.provider.toLowerCase().replaceAll("-", "_").includes(provider));
   const requirementState = (entry: ReturnType<typeof requirement>, passedRank: number): JourneyStatus => {
     if (entry?.status === "APPROVED") return "complete";
@@ -86,8 +90,9 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
   const [profileOpen, setProfileOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [activeTool, setActiveTool] = useState("hubspot");
+  const [activeTool, setActiveTool] = useState("intake");
   const [selectedJourneyStep, setSelectedJourneyStep] = useState<JourneyTool | null>(null);
+  const [queueOpen, setQueueOpen] = useState(false);
 
   const filtered = useMemo(() => onboardings.filter((item) => {
     const haystack = `${item.client} ${item.engagement} ${item.owner} ${item.stage}`.toLowerCase();
@@ -99,8 +104,22 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
   const waitingCount = onboardings.filter((item) => item.stage === "Awaiting client").length;
   const riskCount = onboardings.filter((item) => item.sla !== "Healthy").length;
   const attentionItems = onboardings.filter((item) => item.stage !== "Complete" && (item.blocker !== "None" || item.sla !== "Healthy")).slice(0, 3);
+
+  const needsContract = onboardings.filter((item) => ["Received", "Commercial hold"].includes(item.stage) && findRequirement(item, ["contract", "agreement", "docusign"])?.status !== "APPROVED");
+  const needsDeposit = onboardings.filter((item) => ["Received", "Commercial hold"].includes(item.stage) && findRequirement(item, ["deposit", "payment"])?.status !== "APPROVED");
+  const readyToProvision = onboardings.filter((item) => item.stage === "Ready to provision");
+  const readyForKickoff = onboardings.filter((item) => item.stage === "Ready for kickoff");
+  const readyToComplete = onboardings.filter((item) => item.stage === "Kickoff scheduled");
+  const queueGroups = [
+    { key: "contract", title: "Needs contract signed", items: needsContract, actionLabel: "Mark signed", action: "simulate_contract" },
+    { key: "deposit", title: "Needs deposit received", items: needsDeposit, actionLabel: "Mark received", action: "simulate_deposit" },
+    { key: "provision", title: "Ready to provision", items: readyToProvision, actionLabel: "Provision workspace", action: "provision" },
+    { key: "kickoff", title: "Ready for kickoff", items: readyForKickoff, actionLabel: "Schedule kickoff", action: "schedule_kickoff" },
+    { key: "complete", title: "Ready to complete", items: readyToComplete, actionLabel: "Complete onboarding", action: "complete" },
+  ];
+  const queueCount = queueGroups.reduce((sum, group) => sum + group.items.length, 0);
   const toolCopy: Record<string, { title: string; detail: string }> = {
-    hubspot: { title: "01 · Closed-won received", detail: "HubSpot—or the manual dashboard form—sends the deal and client details into the same intake endpoint." },
+    intake: { title: "01 · New client received", detail: "A Slack /onboard-client command, a HubSpot closed-won deal, or the manual dashboard form sends the deal and client details into the same intake endpoint." },
     n8n: { title: "02 · n8n validates the handoff", detail: "n8n checks required fields, normalizes the payload, assigns an idempotency key, and rejects malformed events." },
     commercial: { title: "03 · Stripe + DocuSign", detail: "Stripe confirms the deposit and DocuSign confirms the agreement. Both must pass before provisioning is released." },
     delivery: { title: "04 · ClickUp + Drive + Slack", detail: "The system creates the real delivery project, folder structure, and internal communication channel, then stores every provider ID and URL." },
@@ -159,6 +178,7 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
           <button className="rail-link active" aria-label="Operations" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><LayoutGrid size={19} /></button>
           <button className="rail-link" aria-label="Clients" onClick={() => document.querySelector(".ledger")?.scrollIntoView({ behavior: "smooth" })}><Users size={19} /></button>
           <button className="rail-link" aria-label="Automation" onClick={() => window.open("http://localhost:5678/home/workflows", "_blank")}><Sparkles size={19} /></button>
+          <button className="rail-link" aria-label={`Manual action queue: ${queueCount} items`} onClick={() => setQueueOpen(true)}><ListChecks size={19} />{queueCount > 0 && <i className="queue-badge">{queueCount}</i>}</button>
         </nav>
         <div className="rail-bottom">
           <button className="rail-link" aria-label="Help" onClick={() => showNotice("Help center will be added with the operating runbooks")}><CircleHelp size={19} /></button>
@@ -183,7 +203,7 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
           </section>
 
           <section className="purpose-map" aria-label="Purpose and output of the system">
-            <article><span className="purpose-number">INPUT · 01</span><div className="purpose-icon"><BriefcaseBusiness size={21} /></div><div><h2>A new client is won</h2><p>A closed-won CRM event—or a manual handoff—provides the client, deal, owner, and service.</p></div></article>
+            <article><span className="purpose-number">INPUT · 01</span><div className="purpose-icon"><BriefcaseBusiness size={21} /></div><div><h2>A new client is won</h2><p>A Slack /onboard-client command, a closed-won HubSpot deal, or a manual handoff provides the client, deal, owner, and service.</p></div></article>
             <ArrowRight className="purpose-arrow" size={18} />
             <article><span className="purpose-number">PROCESS · 02</span><div className="purpose-icon"><FileCheck2 size={21} /></div><div><h2>The handoff is verified</h2><p>n8n checks the contract and deposit, creates the onboarding record, and tracks every blocker.</p></div></article>
             <ArrowRight className="purpose-arrow" size={18} />
@@ -193,7 +213,7 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
           <section className="workflow-map" aria-label="Live onboarding workflow">
             <header><div><p className="eyebrow"><span /> How it works</p><h2>What happens after a deal closes</h2></div><span className="workflow-live"><i /> Live · 10 workflows published</span></header>
             <div className="workflow-track">
-              <button className={`workflow-node hubspot ${activeTool === "hubspot" ? "selected" : ""}`} onClick={() => setActiveTool("hubspot")}><span><SiHubspot /></span><b>HubSpot</b><small>Closed-won</small></button>
+              <button className={`workflow-node intake ${activeTool === "intake" ? "selected" : ""}`} onClick={() => setActiveTool("intake")}><span className="dual-logo"><FaSlack /><SiHubspot /></span><b>Slack + HubSpot</b><small>Closed-won</small></button>
               <div className="workflow-wire active"><i /></div>
               <button className={`workflow-node n8n ${activeTool === "n8n" ? "selected" : ""}`} onClick={() => setActiveTool("n8n")}><span><SiN8N /></span><b>n8n</b><small>Normalize</small></button>
               <div className="workflow-wire active delay-one"><i /></div>
@@ -247,7 +267,7 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
         <div className="next-step"><small>NEXT SYSTEM OUTPUT</small><strong>{stageCopy[selected.stage]?.next ?? "Continue to the next configured onboarding step."}</strong></div>
         <section className="client-journey" aria-label={`${selected.client} automation journey`}>
           <header><div><small>TOOL-BY-TOOL PROGRESS</small><h3>Automation journey</h3></div><span>{selectedJourney.filter((step) => step.status === "complete").length}/{selectedJourney.length} tools complete</span></header>
-          <div className="journey-rail">{selectedJourney.map((step, index) => <button key={step.key} className={`${step.key} ${step.status} ${journeyFocus?.key === step.key ? "selected" : ""}`} onClick={() => setSelectedJourneyStep(step.key)} aria-label={`${step.label}: ${step.status}`} aria-pressed={journeyFocus?.key === step.key}><i className="journey-logo"><ToolLogo tool={step.key} /></i><span>{step.label}<small>{step.status}</small></span>{index < selectedJourney.length - 1 && <em />}</button>)}</div>
+          <div className="journey-rail">{selectedJourney.map((step, index) => <button key={step.key} className={`${step.key} ${step.status} ${journeyFocus?.key === step.key ? "selected" : ""}`} onClick={() => setSelectedJourneyStep(step.key)} aria-label={`${step.label}: ${step.status}`} aria-pressed={journeyFocus?.key === step.key}><i className="journey-logo"><ToolLogo tool={step.key} /></i><span>{step.label}<small>{step.status}</small></span>{index < selectedJourney.length - 1 && <em style={{ "--comet-index": index } as React.CSSProperties} />}</button>)}</div>
           {journeyFocus && <article className={`journey-focus ${journeyFocus.status}`}><div><span>{journeyFocus.phase}</span><b>{journeyFocus.label}</b></div><p>{journeyFocus.detail}</p>{journeyFocus.status !== "complete" && <small><ArrowRight size={12} /> Upcoming: {journeyFocus.next}</small>}{journeyFocus.url && <a href={journeyFocus.url} target="_blank" rel="noreferrer">Open resource <ArrowUpRight size={12} /></a>}</article>}
           <footer><span><SiN8N /> n8n orchestrates every transition</span><span><SiPostgresql /> PostgreSQL preserves the state</span></footer>
         </section>
@@ -255,7 +275,22 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
         {selected.resources.length > 0 && <div className="detail-list"><small>PROVISIONED RESOURCES</small>{selected.resources.map((resource) => <span key={resource.provider}><i className={resource.status.toLowerCase()}>{resource.status === "SUCCEEDED" ? <Check size={11} /> : "!"}</i>{resource.provider.replaceAll("_", " ")}<b>{resource.status}</b>{resource.url && <a href={resource.url} target="_blank" rel="noreferrer"><ArrowUpRight size={12} /></a>}</span>)}</div>}
         {selected.kickoff && <div className="detail-list"><small>KICKOFF BOOKING</small><span><i className="succeeded"><Check size={11} /></i>{new Date(selected.kickoff.startsAt).toLocaleString()}<b>BOOKED</b></span></div>}
         <div className="output-list"><small>FINAL ONBOARDING OUTPUT</small><span><Check size={13} /> Commercially approved client</span><span><Check size={13} /> Provisioned delivery workspace</span><span><Check size={13} /> Completed intake and scheduled kickoff</span></div>
-        <div className="drawer-actions">{selected.stage === "Ready to provision" && <><button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"provision")}>{actionLoading ? "Working…" : "Provision workspace"}</button><button className="secondary-action" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"provision",{simulate_failure:"google_drive"})}>Test failure path</button></>}{selected.stage === "Provisioning partial" && selected.resources.filter((r) => r.status === "FAILED").map((resource) => <button className="primary" key={resource.provider} disabled={actionLoading} onClick={() => runOnboardingAction(selected,"retry",{provider:resource.provider})}>Retry {resource.provider.replaceAll("_", " ")}</button>)}{selected.stage === "Awaiting client" && selected.intakeToken && <button className="primary" onClick={() => window.open(`/intake/${selected.intakeToken}`,"_blank")}>Open client intake <ArrowUpRight size={14} /></button>}{selected.stage === "Ready for kickoff" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"schedule_kickoff")}>{actionLoading ? "Scheduling…" : "Schedule kickoff"}</button>}{selected.stage === "Kickoff scheduled" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"complete")}>{actionLoading ? "Completing…" : "Complete onboarding"}</button>}<button className="secondary-action" onClick={() => window.open("http://localhost:5678/home/workflows", "_blank")}>View n8n workflows</button></div>
+        <div className="drawer-actions">{["Received", "Commercial hold"].includes(selected.stage) && <>{findRequirement(selected, ["contract", "agreement", "docusign"])?.status !== "APPROVED" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected, "simulate_contract")}>{actionLoading ? "Working…" : "Mark contract signed (demo)"}</button>}{findRequirement(selected, ["deposit", "payment"])?.status !== "APPROVED" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected, "simulate_deposit")}>{actionLoading ? "Working…" : "Mark deposit received (demo)"}</button>}</>}{selected.stage === "Ready to provision" && <><button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"provision")}>{actionLoading ? "Working…" : "Provision workspace"}</button><button className="secondary-action" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"provision",{simulate_failure:"google_drive"})}>Test failure path</button></>}{selected.stage === "Provisioning partial" && selected.resources.filter((r) => r.status === "FAILED").map((resource) => <button className="primary" key={resource.provider} disabled={actionLoading} onClick={() => runOnboardingAction(selected,"retry",{provider:resource.provider})}>Retry {resource.provider.replaceAll("_", " ")}</button>)}{selected.stage === "Awaiting client" && selected.intakeToken && <button className="primary" onClick={() => window.open(`/intake/${selected.intakeToken}`,"_blank")}>Open client intake <ArrowUpRight size={14} /></button>}{selected.stage === "Ready for kickoff" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"schedule_kickoff")}>{actionLoading ? "Scheduling…" : "Schedule kickoff"}</button>}{selected.stage === "Kickoff scheduled" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"complete")}>{actionLoading ? "Completing…" : "Complete onboarding"}</button>}<button className="secondary-action" onClick={() => window.open("http://localhost:5678/home/workflows", "_blank")}>View n8n workflows</button></div>
+      </aside></div>}
+
+      {queueOpen && <div className="drawer-backdrop" onClick={() => setQueueOpen(false)}><aside className="action-panel" onClick={(event) => event.stopPropagation()}>
+        <button className="drawer-close" aria-label="Close queue" onClick={() => setQueueOpen(false)}><X size={18} /></button>
+        <p className="eyebrow"><span /> Manual action queue</p>
+        <h2>{queueCount === 0 ? "Nothing needs your input" : `${queueCount} item${queueCount === 1 ? "" : "s"} need your input`}</h2>
+        <p className="queue-sub">Every manual step across every client, in one place—signing, deposits, provisioning, kickoff, and completion.</p>
+        {queueGroups.filter((group) => group.items.length > 0).map((group) => <section className="queue-group" key={group.key}>
+          <h3>{group.title}<small>{group.items.length}</small></h3>
+          {group.items.map((item) => <div className="queue-row" key={item.id}>
+            <button className="queue-row-open" onClick={() => { setQueueOpen(false); openClient(item); }}><strong>{item.client}</strong><small>{item.displayId} · {item.engagement}</small></button>
+            <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(item, group.action)}>{group.actionLabel}</button>
+          </div>)}
+        </section>)}
+        {queueCount === 0 && <p className="queue-empty">All clients are past their next manual step. Check back after the next automated cycle.</p>}
       </aside></div>}
 
       <dialog ref={dialogRef} className="new-dialog"><form action={createOnboarding}><button type="button" className="drawer-close" aria-label="Close" onClick={() => dialogRef.current?.close()}><X size={18} /></button><p className="eyebrow"><span /> Manual intake</p><h2>Create onboarding</h2><p>Add a closed-won handoff when the CRM event is unavailable.</p><div className="form-grid"><label>Company name<input name="company_name" required /></label><label>Engagement<input name="deal_name" required /></label><label>Contact name<input name="contact_name" required /></label><label>Contact email<input name="contact_email" type="email" required /></label><label>Deal value (USD)<input name="amount" type="number" min="0" defaultValue="10000" required /></label><label>Service template<select name="service_template"><option value="agency-growth">Agency growth</option><option value="consulting-standard">Consulting standard</option><option value="recruiting-launch">Recruiting launch</option></select></label></div><button className="primary submit" disabled={submitting}>{submitting ? "Creating…" : "Create onboarding"}</button></form></dialog>

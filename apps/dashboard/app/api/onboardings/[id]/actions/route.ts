@@ -7,7 +7,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (!/^[0-9a-f-]{36}$/i.test(id)) return NextResponse.json({ error: "Invalid onboarding ID" }, { status: 400 });
   const body = await request.json();
   let endpoint: string;
-  let payload: Record<string, string>;
+  let payload: Record<string, unknown>;
 
   if (body.action === "provision") {
     endpoint = "provision-onboarding";
@@ -26,6 +26,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   } else if (body.action === "complete") {
     endpoint = "complete-onboarding";
     payload = { onboarding_id: id };
+  } else if (body.action === "simulate_contract") {
+    endpoint = "docusign-simulate-signed";
+    payload = { onboarding_id: id };
+  } else if (body.action === "simulate_deposit") {
+    endpoint = "stripe-payment-event";
+    payload = {
+      id: `evt_demo_${crypto.randomUUID()}`,
+      type: "payment_intent.succeeded",
+      data: { object: { id: `pi_demo_${crypto.randomUUID()}`, metadata: { onboarding_id: id } } },
+    };
   } else {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }

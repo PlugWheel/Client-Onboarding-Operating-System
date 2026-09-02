@@ -25,6 +25,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .rail-link:hover { color: white; background: #303b36; }
 .rail-link.active { color: white; background: #3b4842; }
 .rail-link.active::before { content: ""; position: absolute; left: -15px; height: 22px; width: 3px; background: var(--rust); }
+.queue-badge { position: absolute; top: 2px; right: 2px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; display: grid; place-items: center; background: var(--rust); color: #fff; border: 1px solid var(--ink); font: 700 8px "IBM Plex Mono", monospace; }
 .rail-bottom { margin-top: auto; display: grid; gap: 10px; place-items: center; }
 .avatar { margin-top: 10px; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #637169; border-radius: 50%; color: #d8ded9; font: 500 10px "IBM Plex Mono", monospace; }
 
@@ -81,6 +82,7 @@ h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(40px, 4.1v
 .workflow-node.selected::after { content: ""; position: absolute; bottom: -1px; width: 34px; height: 3px; background: var(--rust); }
 .workflow-node > span { min-height: 30px; display: flex; align-items: center; justify-content: center; color: #f2f5f3; font-size: 27px; }
 .workflow-node.hubspot > span { color: #ff7a59; } .workflow-node.n8n > span { color: #ff6d5a; } .workflow-node.calendly > span { color: #79a9ff; }
+.workflow-node.intake .dual-logo > svg:first-child { color: #ecb22e; } .workflow-node.intake .dual-logo > svg:last-child { color: #ff7a59; }
 .workflow-node b { margin-top: 8px; font-size: 10px; } .workflow-node small { margin-top: 3px; color: #96aaa0; font: 500 7px "IBM Plex Mono", monospace; }
 .dual-logo { gap: 7px; } .dual-logo > svg { width: 27px; height: 27px; color: #635bff; } .dual-logo > svg:last-child { border-radius: 5px; }
 .triple-logo { gap: 6px; font-size: 19px !important; } .triple-logo svg:nth-child(1) { color: #b36ef4; } .triple-logo svg:nth-child(2) { color: #6aa9df; } .triple-logo svg:nth-child(3) { color: #e6c95c; }
@@ -182,6 +184,18 @@ tbody tr { cursor: default; }
 
 .drawer-backdrop { position: fixed; z-index: 40; inset: 0; background: rgba(20,27,24,.4); backdrop-filter: blur(3px); animation: fade .18s ease both; }
 .detail-drawer { position: absolute; inset: 0 0 0 auto; width: min(650px, 94vw); padding: 54px 40px; overflow-y: auto; background: var(--paper); border-left: 1px solid var(--line); box-shadow: -20px 0 50px rgba(19,26,23,.16); animation: slide .28s cubic-bezier(.2,.8,.2,1) both; }
+.action-panel { position: absolute; inset: 0 auto 0 72px; width: min(480px, 90vw); padding: 54px 34px; overflow-y: auto; background: var(--paper); border-right: 1px solid var(--line); box-shadow: 20px 0 50px rgba(19,26,23,.16); animation: slide-left .28s cubic-bezier(.2,.8,.2,1) both; }
+.action-panel h2 { margin: 12px 0 5px; font: 500 27px/1.15 Georgia, serif; letter-spacing: -.03em; }
+.queue-sub { margin: 0 0 26px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.queue-group { margin-bottom: 22px; }
+.queue-group h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 9px; font: 650 10px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .06em; color: var(--rust); }
+.queue-group h3 small { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; background: var(--rust); color: #fff; font: 700 8px "IBM Plex Mono", monospace; }
+.queue-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 13px; margin-bottom: 6px; border: 1px solid var(--line); background: var(--white); }
+.queue-row-open { flex: 1; min-width: 0; border: 0; background: transparent; text-align: left; cursor: pointer; padding: 0; }
+.queue-row-open strong { display: block; font-size: 12px; }
+.queue-row-open small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.queue-row .primary { flex-shrink: 0; padding: 8px 12px; font-size: 10px; }
+.queue-empty { padding: 30px 0; color: var(--muted); font-size: 12px; text-align: center; }
 .drawer-close { position: absolute; top: 18px; right: 18px; width: 34px; height: 34px; border: 1px solid var(--line); background: transparent; display: grid; place-items: center; cursor: pointer; color: var(--ink); }
 .detail-drawer h2, .new-dialog h2 { margin: 12px 0 5px; font: 500 39px/1 Georgia, serif; letter-spacing: -.04em; }
 .drawer-engagement, .new-dialog form > p { color: var(--muted); font-size: 12px; }
@@ -204,13 +218,17 @@ tbody tr { cursor: default; }
 .client-journey header > span { color: var(--muted); font: 500 8px "IBM Plex Mono", monospace; }
 .journey-rail { padding: 17px 14px 13px; display: grid; grid-template-columns: repeat(8, minmax(49px, 1fr)); gap: 3px; overflow-x: auto; }
 .journey-rail button { position: relative; min-width: 49px; padding: 4px 2px 9px; display: flex; align-items: center; flex-direction: column; border: 0; color: #7a817d; background: transparent; cursor: pointer; }
-.journey-rail button > em { position: absolute; z-index: 0; top: 20px; left: calc(50% + 20px); width: calc(100% - 35px); height: 1px; background: #d8d5cd; }
+.journey-rail button > em { position: absolute; z-index: 0; top: 20px; left: calc(50% + 20px); width: calc(100% - 35px); height: 1px; background: #d8d5cd; overflow: visible; }
 .journey-logo { position: relative; z-index: 1; width: 35px; height: 35px; display: grid; place-items: center; color: #8c928f; background: #eeece6; border: 1px solid #d8d4ca; border-radius: 50%; transition: .18s ease; }
 .journey-logo svg { width: 17px; height: 17px; }
 .journey-rail button > span { margin-top: 7px; font-size: 8px; font-weight: 750; white-space: nowrap; }
 .journey-rail button > span small { display: block; margin-top: 2px; color: #999e9b; font: 500 6px "IBM Plex Mono", monospace; text-transform: uppercase; }
 .journey-rail button.complete .journey-logo { color: white; border-color: var(--forest); background: var(--forest); }
 .journey-rail button.complete > em { background: #8eae9b; }
+.journey-rail button.complete > em::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, #8eae9b, var(--forest)); animation: comet-fill .8s ease calc(var(--comet-index, 0) * 130ms) both; }
+.journey-rail button.complete > em::after { content: ""; position: absolute; top: -3px; left: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px 2px var(--gold); animation: comet-travel .8s ease calc(var(--comet-index, 0) * 130ms) both; }
+@keyframes comet-fill { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes comet-travel { from { left: 0; opacity: 1; } to { left: 96%; opacity: 0; } }
 .journey-rail button.current .journey-logo { color: var(--rust); border-color: var(--rust); background: #fff7ef; box-shadow: 0 0 0 4px #f4dfd1; animation: pulse-ring 1.8s ease infinite; }
 .journey-rail button.failed .journey-logo, .journey-rail button.blocked .journey-logo { color: white; border-color: var(--rust); background: var(--rust); }
 .journey-rail button.upcoming { opacity: .5; }
@@ -285,9 +303,10 @@ tbody tr { cursor: default; }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slide { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes slide-left { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 @keyframes relay { 0% { left: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { left: calc(100% - 6px); opacity: 0; } }
 @keyframes pulse { 50% { transform: scale(1.35); box-shadow: 0 0 0 3px rgba(197,82,49,.16); } }
 @keyframes pulse-ring { 50% { box-shadow: 0 0 0 7px rgba(197,82,49,.08); } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 @media (max-width: 1050px) { .metrics { grid-template-columns: repeat(2,1fr); } .attention { grid-template-columns: 1fr; } .attention-title { border-right: 0; border-bottom: 1px solid #dec6ad; } .workflow-track { overflow-x: auto; grid-template-columns: 100px 55px 100px 55px 100px 55px 100px 55px 118px; } .workflow-explainer { grid-template-columns: 1fr; gap: 7px; } .purpose-map { grid-template-columns: 1fr; } .purpose-arrow { transform: rotate(90deg); margin: -4px 0; } }
-@media (max-width: 760px) { .rail { width: 55px; } .workspace { margin-left: 55px; width: calc(100% - 55px); } .topbar { padding: 0 18px; } .content { padding: 36px 18px; } .intro { align-items: flex-start; gap: 25px; flex-direction: column; } .metrics { grid-template-columns: 1fr; } .attention-items { grid-template-columns: 1fr; } .attention-items article { border-right: 0; border-bottom: 1px solid #dec6ad; } .ledger-head { align-items: flex-start; gap: 15px; flex-direction: column; } .tools { width: 100%; } .tools label { flex: 1; } .profile { display: none; } .form-grid { grid-template-columns: 1fr; } .new-dialog form { padding: 38px 24px 24px; } .section-intro { align-items: flex-start; gap: 9px; flex-direction: column; } }
+@media (max-width: 760px) { .rail { width: 55px; } .workspace { margin-left: 55px; width: calc(100% - 55px); } .action-panel { left: 55px; padding: 40px 22px; } .topbar { padding: 0 18px; } .content { padding: 36px 18px; } .intro { align-items: flex-start; gap: 25px; flex-direction: column; } .metrics { grid-template-columns: 1fr; } .attention-items { grid-template-columns: 1fr; } .attention-items article { border-right: 0; border-bottom: 1px solid #dec6ad; } .ledger-head { align-items: flex-start; gap: 15px; flex-direction: column; } .tools { width: 100%; } .tools label { flex: 1; } .profile { display: none; } .form-grid { grid-template-columns: 1fr; } .new-dialog form { padding: 38px 24px 24px; } .section-intro { align-items: flex-start; gap: 9px; flex-direction: column; } }

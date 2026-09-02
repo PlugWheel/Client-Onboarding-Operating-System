@@ -75,6 +75,108 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [1340, 300]
+    },
+    {
+      "parameters": {"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":2},"conditions":[{"id":"44ef4d78-6c66-49e7-a600-dc51e4d10c43","leftValue":"={{ $('Validate Slack Client').item.json.valid }}","rightValue":true,"operator":{"type":"boolean","operation":"true","singleValue":true}}],"combinator":"and"},"options":{}},
+      "id": "022e9127-4921-4f27-a731-84ed3da11a76",
+      "name": "Sync Valid Submission",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {"jsCode":"const p=JSON.parse(Buffer.from($('Validate Slack Client').item.json.payload_base64,'base64').toString('utf8')); const names=p.primary_contact_name.trim().split(/\\s+/); const firstname=names.shift()||p.primary_contact_name,lastname=names.join(' '); const contact_body=JSON.stringify({inputs:[{id:p.primary_contact_email,idProperty:'email',properties:{email:p.primary_contact_email,firstname,lastname}}]}); const company_search_body=JSON.stringify({filterGroups:[{filters:[{propertyName:'name',operator:'EQ',value:p.company_name}]}],properties:['name'],limit:1}); return [{json:{...p,firstname,lastname,amount:String((p.value_cents/100).toFixed(2)),contact_body,company_search_body}}];"},
+      "id": "677a9aba-44c9-4db4-91dd-45a0cfb58263",
+      "name": "Prepare HubSpot Sync",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 220]
+    },
+    {
+      "parameters": {"authentication":"predefinedCredentialType","nodeCredentialType":"hubspotAppToken","method":"POST","url":"https://api.hubapi.com/crm/v3/objects/contacts/batch/upsert","sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{$json.contact_body}}","options":{}},
+      "id": "4b89ecde-f538-47cf-82bd-04930cfb927c",
+      "name": "Upsert HubSpot Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2000, 220],
+      "credentials": {"hubspotAppToken":{"id":"CCvhDg3jfqJm79pK","name":"HubSpot Service Key account"}}
+    },
+    {
+      "parameters": {"authentication":"predefinedCredentialType","nodeCredentialType":"hubspotAppToken","method":"POST","url":"https://api.hubapi.com/crm/v3/objects/companies/search","sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{$('Prepare HubSpot Sync').item.json.company_search_body}}","options":{}},
+      "id": "8865f335-a776-4db3-b7a4-f5a99ba221b7",
+      "name": "Find HubSpot Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2220, 220],
+      "credentials": {"hubspotAppToken":{"id":"CCvhDg3jfqJm79pK","name":"HubSpot Service Key account"}}
+    },
+    {
+      "parameters": {"jsCode":"const found=$json.results?.[0]; const source=$('Prepare HubSpot Sync').item.json; return [{json:{...source,company_id:found?.id?String(found.id):'',create_company:!found?.id,company_body:JSON.stringify({properties:{name:source.company_name}})}}];"},
+      "id": "882e445c-5593-4c2e-acb1-688b57dd1c6e",
+      "name": "Resolve HubSpot Company",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 220]
+    },
+    {
+      "parameters": {"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":2},"conditions":[{"id":"b98dd758-ae8e-4050-8812-d0ee25fd10af","leftValue":"={{ $json.create_company }}","rightValue":true,"operator":{"type":"boolean","operation":"true","singleValue":true}}],"combinator":"and"},"options":{}},
+      "id": "ce1d3757-100a-47a7-8e43-1b02183506fa",
+      "name": "Company Missing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2660, 220]
+    },
+    {
+      "parameters": {"authentication":"predefinedCredentialType","nodeCredentialType":"hubspotAppToken","method":"POST","url":"https://api.hubapi.com/crm/v3/objects/companies","sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{$json.company_body}}","options":{}},
+      "id": "831c15d4-f7e1-4254-9da4-f48ba88b57a7",
+      "name": "Create HubSpot Company",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2880, 140],
+      "credentials": {"hubspotAppToken":{"id":"CCvhDg3jfqJm79pK","name":"HubSpot Service Key account"}}
+    },
+    {
+      "parameters": {"jsCode":"const source=$('Prepare HubSpot Sync').item.json; const contact=$('Upsert HubSpot Contact').item.json.results?.[0]; const companyId=$json.id??$json.company_id; if(!contact?.id||!companyId) throw new Error('HubSpot contact/company ID missing'); const deal_body=JSON.stringify({properties:{dealname:source.deal_name,pipeline:'default',dealstage:'closedwon',amount:source.amount,closedate:source.closed_won_at},associations:[{to:{id:String(contact.id)},types:[{associationCategory:'HUBSPOT_DEFINED',associationTypeId:3}]},{to:{id:String(companyId)},types:[{associationCategory:'HUBSPOT_DEFINED',associationTypeId:5}]}]}); return [{json:{...source,contact_id:String(contact.id),company_id:String(companyId),deal_body}}];"},
+      "id": "84f429e3-1adc-47f9-865e-1312569c06a9",
+      "name": "Build HubSpot Associations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3100, 220]
+    },
+    {
+      "parameters": {"authentication":"predefinedCredentialType","nodeCredentialType":"hubspotAppToken","method":"POST","url":"https://api.hubapi.com/crm/v3/objects/deals","sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{$json.deal_body}}","options":{}},
+      "id": "ae98e17d-6f0e-4907-aada-acde059f814f",
+      "name": "Create HubSpot Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3320, 220],
+      "credentials": {"hubspotAppToken":{"id":"CCvhDg3jfqJm79pK","name":"HubSpot Service Key account"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "const result=$('Create Onboarding Atomically').item.json.result??{}; const onboardingId=String(result.onboarding_id??result.id??''); if(!/^[0-9a-f-]{36}$/i.test(onboardingId))throw new Error('Created onboarding ID is unavailable'); return [{json:{onboarding_id:onboardingId,request_body:JSON.stringify({onboarding_id:onboardingId})}}];"
+      },
+      "id": "ab9117e8-9bf3-4543-bef5-5b106326175a",
+      "name": "Prepare Automatic Agreement",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/docusign-send-contract",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json.request_body}}",
+        "options": {"timeout": 30000}
+      },
+      "id": "1fbc0de6-05ab-45fa-8f1f-6d2c209614c1",
+      "name": "Send Agreement Automatically",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2000, 420]
     }
   ],
   "pinData": {},
@@ -83,7 +185,17 @@
     "Validate Slack Client": { "main": [[{ "node": "Client Input Valid", "type": "main", "index": 0 }]] },
     "Client Input Valid": { "main": [[{ "node": "Create Onboarding Atomically", "type": "main", "index": 0 }], [{ "node": "Reply Privately in Slack", "type": "main", "index": 0 }]] },
     "Create Onboarding Atomically": { "main": [[{ "node": "Build Slack Confirmation", "type": "main", "index": 0 }]] },
-    "Build Slack Confirmation": { "main": [[{ "node": "Reply Privately in Slack", "type": "main", "index": 0 }]] }
+    "Build Slack Confirmation": { "main": [[{ "node": "Reply Privately in Slack", "type": "main", "index": 0 }]] },
+    "Reply Privately in Slack": { "main": [[{ "node": "Sync Valid Submission", "type": "main", "index": 0 }]] },
+    "Sync Valid Submission": { "main": [[{ "node": "Prepare HubSpot Sync", "type": "main", "index": 0 }, { "node": "Prepare Automatic Agreement", "type": "main", "index": 0 }], []] },
+    "Prepare HubSpot Sync": { "main": [[{ "node": "Upsert HubSpot Contact", "type": "main", "index": 0 }]] },
+    "Upsert HubSpot Contact": { "main": [[{ "node": "Find HubSpot Company", "type": "main", "index": 0 }]] },
+    "Find HubSpot Company": { "main": [[{ "node": "Resolve HubSpot Company", "type": "main", "index": 0 }]] },
+    "Resolve HubSpot Company": { "main": [[{ "node": "Company Missing", "type": "main", "index": 0 }]] },
+    "Company Missing": { "main": [[{ "node": "Create HubSpot Company", "type": "main", "index": 0 }], [{ "node": "Build HubSpot Associations", "type": "main", "index": 0 }]] },
+    "Create HubSpot Company": { "main": [[{ "node": "Build HubSpot Associations", "type": "main", "index": 0 }]] },
+    "Build HubSpot Associations": { "main": [[{ "node": "Create HubSpot Deal", "type": "main", "index": 0 }]] },
+    "Prepare Automatic Agreement": { "main": [[{ "node": "Send Agreement Automatically", "type": "main", "index": 0 }]] }
   },
   "active": false,
   "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq" },
