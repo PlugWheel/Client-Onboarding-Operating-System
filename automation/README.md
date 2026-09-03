@@ -9,6 +9,7 @@ Current workflows are named for the business outcome they produce:
 - `01A | Slack Intake | Create Client Onboarding`: accepts a structured `/onboard-client` command and creates the onboarding record directly from Slack.
 - `02 | Sales Handoff | Sync HubSpot Closed-Won Deals`: polls HubSpot for newly won deals when webhooks are unavailable.
 - `03 | Commercial Gate | Record Stripe Payment`: records deposit success or failure and reevaluates readiness.
+- `03A | Commercial Gate | Create & Email Stripe Payment Link`: creates an onboarding-specific Stripe payment link and emails it to the client after HubSpot synchronization.
 - `04A | Commercial Gate | Send DocuSign Agreement`: sends the onboarding agreement for signature.
 - `04B | Commercial Gate | Check DocuSign Agreement`: checks agreement status and records completion.
 - `04Z | Legacy Adapter | Receive PandaDoc Contract Event`: retains compatibility with the earlier PandaDoc implementation; it is not part of the primary showcase path.

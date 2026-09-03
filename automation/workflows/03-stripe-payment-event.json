@@ -24,7 +24,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT app.process_commercial_event(convert_from(decode($1, 'base64'), 'UTF8')::jsonb) AS result;",
+        "query": "WITH payload AS (SELECT convert_from(decode($1, 'base64'), 'UTF8')::jsonb AS value), processed AS (SELECT app.process_commercial_event(value) AS result FROM payload), payment_request AS (UPDATE app.payment_requests SET status=CASE WHEN (SELECT value->>'result' FROM payload)='paid' THEN 'paid' ELSE 'failed' END,updated_at=now() WHERE onboarding_id=(SELECT NULLIF(value->>'onboarding_id','')::uuid FROM payload) RETURNING 1) SELECT result FROM processed;",
         "options": { "queryReplacement": "={{ $json.payload_base64 }}" }
       },
       "id": "ec52eb29-d35f-4c04-882c-39323893180e",
@@ -41,13 +41,40 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [970, 320]
+    },
+    {
+      "parameters": {"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":2},"conditions":[{"id":"cb924894-1600-4fb1-8040-b04556c104bd","leftValue":"={{ $('Normalize Payment').item.json.result }}","rightValue":"paid","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"options":{}},
+      "id": "36d095b6-ce27-4693-936c-ee4ebc413f14",
+      "name": "Payment Succeeded",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1190, 320]
+    },
+    {
+      "parameters": {"jsCode":"const normalized=$('Normalize Payment').item.json; const result=$('Evaluate Commercial Readiness').item.json.result??{}; const onboardingId=String(normalized.onboarding_id||result.onboarding_id||''); if(!/^[0-9a-f-]{36}$/i.test(onboardingId))throw new Error('Payment could not be correlated to an onboarding ID'); return [{json:{onboarding_id:onboardingId,request_body:JSON.stringify({onboarding_id:onboardingId})}}];"},
+      "id": "c47d2c11-03c0-43b5-9484-83e0b1510f1f",
+      "name": "Prepare Agreement Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1410, 240]
+    },
+    {
+      "parameters": {"method":"POST","url":"http://localhost:5678/webhook/docusign-send-contract","sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{$json.request_body}}","options":{"timeout":30000}},
+      "id": "95026888-edb4-43db-83a6-53344bd75a4f",
+      "name": "Send Agreement After Payment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1630, 240]
     }
   ],
   "pinData": {},
   "connections": {
     "Stripe CLI Webhook": { "main": [[{ "node": "Normalize Payment", "type": "main", "index": 0 }]] },
     "Normalize Payment": { "main": [[{ "node": "Evaluate Commercial Readiness", "type": "main", "index": 0 }]] },
-    "Evaluate Commercial Readiness": { "main": [[{ "node": "Acknowledge Stripe", "type": "main", "index": 0 }]] }
+    "Evaluate Commercial Readiness": { "main": [[{ "node": "Acknowledge Stripe", "type": "main", "index": 0 }]] },
+    "Acknowledge Stripe": { "main": [[{ "node": "Payment Succeeded", "type": "main", "index": 0 }]] },
+    "Payment Succeeded": { "main": [[{ "node": "Prepare Agreement Request", "type": "main", "index": 0 }], []] },
+    "Prepare Agreement Request": { "main": [[{ "node": "Send Agreement After Payment", "type": "main", "index": 0 }]] }
   },
   "active": false,
   "settings": { "executionOrder": "v1", "timezone": "Asia/Dhaka", "errorWorkflow": "G59thUjhLUYVEdGq" },

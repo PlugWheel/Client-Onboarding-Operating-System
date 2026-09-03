@@ -153,6 +153,22 @@
       "credentials": {"hubspotAppToken":{"id":"CCvhDg3jfqJm79pK","name":"HubSpot Service Key account"}}
     },
     {
+      "parameters": {"jsCode":"const result=$('Create Onboarding Atomically').item.json.result??{};const onboardingId=String(result.onboarding_id??result.id??'');if(!/^[0-9a-f-]{36}$/i.test(onboardingId))throw new Error('Created onboarding ID is unavailable');return[{json:{onboarding_id:onboardingId,request_body:JSON.stringify({onboarding_id:onboardingId})}}];"},
+      "id": "78e13c73-a19d-4c72-ad07-c1bbfe8e9240",
+      "name": "Prepare Payment Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3540,220]
+    },
+    {
+      "parameters": {"method":"POST","url":"http://localhost:5678/webhook/send-payment-link","sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{$json.request_body}}","options":{"timeout":30000}},
+      "id": "398ed5a7-1f66-4385-9927-b8563073af13",
+      "name": "Create and Email Payment Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3760,220]
+    },
+    {
       "parameters": {
         "jsCode": "const result=$('Create Onboarding Atomically').item.json.result??{}; const onboardingId=String(result.onboarding_id??result.id??''); if(!/^[0-9a-f-]{36}$/i.test(onboardingId))throw new Error('Created onboarding ID is unavailable'); return [{json:{onboarding_id:onboardingId,request_body:JSON.stringify({onboarding_id:onboardingId})}}];"
       },
@@ -187,7 +203,7 @@
     "Create Onboarding Atomically": { "main": [[{ "node": "Build Slack Confirmation", "type": "main", "index": 0 }]] },
     "Build Slack Confirmation": { "main": [[{ "node": "Reply Privately in Slack", "type": "main", "index": 0 }]] },
     "Reply Privately in Slack": { "main": [[{ "node": "Sync Valid Submission", "type": "main", "index": 0 }]] },
-    "Sync Valid Submission": { "main": [[{ "node": "Prepare HubSpot Sync", "type": "main", "index": 0 }, { "node": "Prepare Automatic Agreement", "type": "main", "index": 0 }], []] },
+    "Sync Valid Submission": { "main": [[{ "node": "Prepare HubSpot Sync", "type": "main", "index": 0 }], []] },
     "Prepare HubSpot Sync": { "main": [[{ "node": "Upsert HubSpot Contact", "type": "main", "index": 0 }]] },
     "Upsert HubSpot Contact": { "main": [[{ "node": "Find HubSpot Company", "type": "main", "index": 0 }]] },
     "Find HubSpot Company": { "main": [[{ "node": "Resolve HubSpot Company", "type": "main", "index": 0 }]] },
@@ -195,6 +211,8 @@
     "Company Missing": { "main": [[{ "node": "Create HubSpot Company", "type": "main", "index": 0 }], [{ "node": "Build HubSpot Associations", "type": "main", "index": 0 }]] },
     "Create HubSpot Company": { "main": [[{ "node": "Build HubSpot Associations", "type": "main", "index": 0 }]] },
     "Build HubSpot Associations": { "main": [[{ "node": "Create HubSpot Deal", "type": "main", "index": 0 }]] },
+    "Create HubSpot Deal": { "main": [[{ "node": "Prepare Payment Request", "type": "main", "index": 0 }]] },
+    "Prepare Payment Request": { "main": [[{ "node": "Create and Email Payment Link", "type": "main", "index": 0 }]] },
     "Prepare Automatic Agreement": { "main": [[{ "node": "Send Agreement Automatically", "type": "main", "index": 0 }]] }
   },
   "active": false,

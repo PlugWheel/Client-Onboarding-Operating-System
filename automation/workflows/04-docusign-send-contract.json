@@ -34,12 +34,28 @@
       "credentials": {"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
     },
     {
+      "parameters":{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":2},"conditions":[{"id":"8417fe6e-6c43-4422-879b-90d70743427c","leftValue":"={{ Boolean($json.existing_envelope_id) }}","rightValue":true,"operator":{"type":"boolean","operation":"true","singleValue":true}}],"combinator":"and"},"options":{}},
+      "id":"051b749f-9664-48fd-b26e-16470c406bdb",
+      "name":"Envelope Already Exists",
+      "type":"n8n-nodes-base.if",
+      "typeVersion":2.2,
+      "position":[780,300]
+    },
+    {
+      "parameters":{"respondWith":"json","responseBody":"={{ {ok:true,provider:'DocuSign',onboarding_id:$json.onboarding_id,envelope_id:$json.existing_envelope_id,status:$json.existing_status,duplicate:true} }}","options":{"responseCode":200}},
+      "id":"b16447fa-f05b-414e-a1d9-b8f0e7b15730",
+      "name":"Return Existing Envelope",
+      "type":"n8n-nodes-base.respondToWebhook",
+      "typeVersion":1.4,
+      "position":[1010,180]
+    },
+    {
       "parameters": {"jsCode":"if(!$json.onboarding_id) throw new Error('Onboarding not found or DocuSign connection is not healthy'); if($json.existing_envelope_id) throw new Error(`A DocuSign envelope already exists (${ $json.existing_status }): ${$json.existing_envelope_id}`); const payload={templateId:$json.template_id,templateRoles:[{email:$json.primary_contact_email,name:$json.primary_contact_name,roleName:'Client'}],emailSubject:'Please sign your client onboarding agreement',emailBlurb:'Please review and sign this agreement so we can continue your onboarding.',customFields:{textCustomFields:[{name:'onboarding_id',value:String($json.onboarding_id),show:'false',required:'false'},{name:'source_deal_id',value:String($json.source_deal_id),show:'false',required:'false'}]},status:'sent'}; return [{json:{...$json,request_body:payload}}];"},
       "id": "2cfac9af-a322-43a0-9e51-3edb3cfaac0d",
       "name": "Build Envelope",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900,300]
+      "position": [1010,380]
     },
     {
       "parameters": {
@@ -86,7 +102,8 @@
   "connections":{
     "Send Contract Request":{"main":[[{"node":"Validate Onboarding","type":"main","index":0}]]},
     "Validate Onboarding":{"main":[[{"node":"Load Contract Context","type":"main","index":0}]]},
-    "Load Contract Context":{"main":[[{"node":"Build Envelope","type":"main","index":0}]]},
+    "Load Contract Context":{"main":[[{"node":"Envelope Already Exists","type":"main","index":0}]]},
+    "Envelope Already Exists":{"main":[[{"node":"Return Existing Envelope","type":"main","index":0}],[{"node":"Build Envelope","type":"main","index":0}]]},
     "Build Envelope":{"main":[[{"node":"Send DocuSign Envelope","type":"main","index":0}]]},
     "Send DocuSign Envelope":{"main":[[{"node":"Record Envelope","type":"main","index":0}]]},
     "Record Envelope":{"main":[[{"node":"Return Sent Envelope","type":"main","index":0}]]}

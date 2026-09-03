@@ -55,6 +55,9 @@ h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(40px, 4.1v
 .primary { border: 0; color: white; background: var(--ink); padding: 12px 18px; display: flex; gap: 13px; align-items: center; font-weight: 700; font-size: 12px; box-shadow: 4px 4px 0 var(--rust); cursor: pointer; transition: transform .18s, box-shadow .18s; }
 .primary:hover { transform: translate(2px,2px); box-shadow: 2px 2px 0 var(--rust); }
 .primary span { font: 400 19px Georgia, serif; }
+.intro-actions { display: flex; align-items: stretch; gap: 12px; }
+.intro-actions .secondary-action { background: var(--white); }
+.intro-actions .secondary-action b { min-width: 19px; height: 19px; display: inline-grid; place-items: center; margin-left: 6px; border-radius: 50%; color: white; background: var(--rust); font: 700 8px "IBM Plex Mono", monospace; }
 
 .purpose-map { margin: 0 0 22px; padding: 0; display: grid; grid-template-columns: 1fr 36px 1fr 36px 1fr; align-items: stretch; border: 1px solid var(--line); background: var(--white); animation: rise .55s .03s ease both; }
 .purpose-map article { position: relative; min-height: 157px; padding: 42px 25px 22px; display: grid; grid-template-columns: 37px 1fr; align-content: center; gap: 14px; }
@@ -76,12 +79,13 @@ h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(40px, 4.1v
 .workflow-map header h2 { margin: 0; font: 500 20px Georgia, serif; }
 .workflow-live { display: flex; align-items: center; gap: 7px; color: #adbbb3; font: 500 8px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .08em; }
 .workflow-live i { width: 7px; height: 7px; border-radius: 50%; background: #65b886; box-shadow: 0 0 0 4px rgba(101,184,134,.14); }
-.workflow-track { min-height: 150px; padding: 24px 29px 18px; display: grid; grid-template-columns: 108px 1fr 108px 1fr 108px 1fr 108px 1fr 126px; align-items: center; }
+.workflow-track { min-height: 150px; padding: 24px 29px 18px; display: grid; grid-template-columns: 108px 1fr 108px 1fr 108px 1fr 108px 1fr 108px 1fr 108px; align-items: center; }
 .workflow-node { position: relative; z-index: 2; min-height: 99px; padding: 10px 6px; border: 1px solid #486157; color: #dce8e1; background: #29483c; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: .2s ease; }
 .workflow-node:hover, .workflow-node.selected { border-color: #ecb084; background: #315447; transform: translateY(-3px); box-shadow: 0 8px 20px rgba(10,22,17,.25); }
 .workflow-node.selected::after { content: ""; position: absolute; bottom: -1px; width: 34px; height: 3px; background: var(--rust); }
 .workflow-node > span { min-height: 30px; display: flex; align-items: center; justify-content: center; color: #f2f5f3; font-size: 27px; }
 .workflow-node.hubspot > span { color: #ff7a59; } .workflow-node.n8n > span { color: #ff6d5a; } .workflow-node.calendly > span { color: #79a9ff; }
+.workflow-node.gmail > span { color: #ea4335; }
 .workflow-node.intake .dual-logo > svg:first-child { color: #ecb22e; } .workflow-node.intake .dual-logo > svg:last-child { color: #ff7a59; }
 .workflow-node b { margin-top: 8px; font-size: 10px; } .workflow-node small { margin-top: 3px; color: #96aaa0; font: 500 7px "IBM Plex Mono", monospace; }
 .dual-logo { gap: 7px; } .dual-logo > svg { width: 27px; height: 27px; color: #635bff; } .dual-logo > svg:last-child { border-radius: 5px; }
@@ -116,6 +120,21 @@ h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(40px, 4.1v
 .metric-lines i { width: 9px; background: #acc5b4; display: block; }
 .metric-lines i:nth-child(1) { height: 25%; } .metric-lines i:nth-child(2) { height: 42%; } .metric-lines i:nth-child(3) { height: 34%; } .metric-lines i:nth-child(4) { height: 62%; } .metric-lines i:nth-child(5) { height: 52%; } .metric-lines i:nth-child(6) { height: 78%; } .metric-lines i:nth-child(7) { height: 92%; background: #e3b080; }
 
+.action-overview { margin: 22px 0; border: 1px solid var(--line); background: var(--white); animation: rise .55s .12s ease both; }
+.action-overview > header { min-height: 66px; padding: 13px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.action-overview > header span { color: var(--rust); font: 500 8px "IBM Plex Mono", monospace; letter-spacing: .1em; }
+.action-overview > header h2 { margin: 5px 0 0; font: 500 21px Georgia, serif; }
+.action-overview > header button { border: 0; display: flex; align-items: center; gap: 7px; color: var(--forest); background: transparent; font-size: 10px; font-weight: 750; cursor: pointer; }
+.action-overview > div { display: grid; grid-template-columns: repeat(4,1fr); }
+.action-overview > div > button { position: relative; min-height: 122px; padding: 18px 20px; border: 0; border-right: 1px solid var(--line); color: var(--ink); background: transparent; text-align: left; cursor: pointer; transition: .18s ease; }
+.action-overview > div > button:last-child { border-right: 0; }
+.action-overview > div > button:hover { background: #f1eee6; }
+.action-overview button small { color: #9a958b; font: 500 8px "IBM Plex Mono", monospace; }
+.action-overview button strong { display: block; margin: 10px 0 4px; font: 500 28px/1 Georgia, serif; }
+.action-overview button span { display: block; font-size: 11px; font-weight: 750; }
+.action-overview button p { margin: 5px 22px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.action-overview button > svg { position: absolute; right: 15px; top: 17px; color: var(--rust); }
+
 .attention { margin: 22px 0; border: 1px solid #d6b99c; background: #f6ece0; display: grid; grid-template-columns: 220px 1fr; animation: rise .55s .15s ease both; }
 .attention-title { padding: 19px 21px; display: flex; gap: 12px; border-right: 1px solid #dec6ad; }
 .attention-title > span { width: 28px; height: 28px; display: grid; place-items: center; background: #e8d2bb; color: #9d4b2c; }
@@ -146,6 +165,8 @@ td { padding: 15px 17px; border-bottom: 1px solid #e4dfd5; font-size: 11px; }
 tbody tr { transition: background .16s; }
 tbody tr:hover { background: #f8f5ee; }
 tbody tr { cursor: default; }
+.client-row { cursor: pointer; outline: none; }
+.client-row:focus-visible { box-shadow: inset 3px 0 var(--rust); background: #f8f5ee; }
 .client { display: flex; align-items: center; gap: 11px; }
 .client > span { flex: 0 0 auto; width: 34px; height: 34px; display: grid; place-items: center; background: color-mix(in srgb, var(--client-accent) 13%, white); color: var(--client-accent); border-left: 3px solid var(--client-accent); font: 600 9px "IBM Plex Mono", monospace; }
 .client strong { display: block; font-size: 11px; }
@@ -254,6 +275,9 @@ tbody tr { cursor: default; }
 .output-list > small { color: #7a827d; margin-bottom: 2px; }
 .output-list span { display: flex; gap: 8px; align-items: center; color: #58625c; font-size: 10px; }
 .output-list span svg { color: var(--forest); }
+.output-list span.pending { color: #8a8f8c; }
+.output-list span.pending svg { color: var(--gold); }
+.output-list span b { margin-left: auto; font: 600 7px "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .06em; }
 .detail-list { margin-top: 20px; display: grid; border: 1px solid var(--line); background: var(--white); }
 .detail-list > small { padding: 10px 13px; color: #778079; background: #efede6; font: 500 8px "IBM Plex Mono", monospace; letter-spacing: .07em; }
 .detail-list > span { min-height: 39px; padding: 8px 11px; display: flex; align-items: center; gap: 8px; border-top: 1px solid #e6e1d8; text-transform: capitalize; font-size: 10px; }
@@ -264,6 +288,13 @@ tbody tr { cursor: default; }
 .detail-list > span a { color: var(--forest); }
 .drawer-actions { margin-top: 25px; display: flex; flex-wrap: wrap; gap: 10px; }
 .drawer-actions .primary { margin: 0; }
+.payment-link-action { width: 100%; min-height: 66px; padding: 11px 14px; display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; text-align: left; color: #fff; background: #635bff; border: 0; box-shadow: 4px 4px 0 #332ca4; cursor: pointer; transition: transform .18s, box-shadow .18s; }
+.payment-link-action:hover { transform: translate(2px,2px); box-shadow: 2px 2px 0 #332ca4; }
+.payment-link-action:disabled { cursor: wait; opacity: .62; }
+.payment-link-action > span:first-child { width: 34px; height: 34px; display: grid; place-items: center; color: #635bff; background: #fff; border-radius: 50%; font-size: 19px; }
+.payment-link-action > span:nth-child(2) { display: grid; gap: 3px; }
+.payment-link-action b { font-size: 11px; }
+.payment-link-action small { color: rgba(255,255,255,.76); font: 500 8px "IBM Plex Mono", monospace; }
 .secondary-action { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); color: var(--forest); background: transparent; font-size: 10px; font-weight: 700; cursor: pointer; }
 .secondary-action:hover { background: var(--white); border-color: var(--forest); }
 .drawer-action { margin-top: 25px; }
@@ -308,5 +339,5 @@ tbody tr { cursor: default; }
 @keyframes pulse { 50% { transform: scale(1.35); box-shadow: 0 0 0 3px rgba(197,82,49,.16); } }
 @keyframes pulse-ring { 50% { box-shadow: 0 0 0 7px rgba(197,82,49,.08); } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
-@media (max-width: 1050px) { .metrics { grid-template-columns: repeat(2,1fr); } .attention { grid-template-columns: 1fr; } .attention-title { border-right: 0; border-bottom: 1px solid #dec6ad; } .workflow-track { overflow-x: auto; grid-template-columns: 100px 55px 100px 55px 100px 55px 100px 55px 118px; } .workflow-explainer { grid-template-columns: 1fr; gap: 7px; } .purpose-map { grid-template-columns: 1fr; } .purpose-arrow { transform: rotate(90deg); margin: -4px 0; } }
-@media (max-width: 760px) { .rail { width: 55px; } .workspace { margin-left: 55px; width: calc(100% - 55px); } .action-panel { left: 55px; padding: 40px 22px; } .topbar { padding: 0 18px; } .content { padding: 36px 18px; } .intro { align-items: flex-start; gap: 25px; flex-direction: column; } .metrics { grid-template-columns: 1fr; } .attention-items { grid-template-columns: 1fr; } .attention-items article { border-right: 0; border-bottom: 1px solid #dec6ad; } .ledger-head { align-items: flex-start; gap: 15px; flex-direction: column; } .tools { width: 100%; } .tools label { flex: 1; } .profile { display: none; } .form-grid { grid-template-columns: 1fr; } .new-dialog form { padding: 38px 24px 24px; } .section-intro { align-items: flex-start; gap: 9px; flex-direction: column; } }
+@media (max-width: 1050px) { .metrics { grid-template-columns: repeat(2,1fr); } .action-overview > div { grid-template-columns: repeat(2,1fr); } .action-overview > div > button:nth-child(2) { border-right: 0; } .action-overview > div > button:nth-child(-n+2) { border-bottom: 1px solid var(--line); } .attention { grid-template-columns: 1fr; } .attention-title { border-right: 0; border-bottom: 1px solid #dec6ad; } .workflow-track { overflow-x: auto; grid-template-columns: 100px 55px 100px 55px 100px 55px 100px 55px 100px 55px 100px; } .workflow-explainer { grid-template-columns: 1fr; gap: 7px; } .purpose-map { grid-template-columns: 1fr; } .purpose-arrow { transform: rotate(90deg); margin: -4px 0; } }
+@media (max-width: 760px) { .rail { width: 55px; } .workspace { margin-left: 55px; width: calc(100% - 55px); } .action-panel { left: 55px; padding: 40px 22px; } .topbar { padding: 0 18px; } .content { padding: 36px 18px; } .intro { align-items: flex-start; gap: 25px; flex-direction: column; } .intro-actions { width: 100%; flex-wrap: wrap; } .metrics, .action-overview > div { grid-template-columns: 1fr; } .action-overview > div > button { border-right: 0; border-bottom: 1px solid var(--line); } .action-overview > div > button:last-child { border-bottom: 0; } .action-overview > header { align-items: flex-start; gap: 10px; flex-direction: column; } .attention-items { grid-template-columns: 1fr; } .attention-items article { border-right: 0; border-bottom: 1px solid #dec6ad; } .ledger-head { align-items: flex-start; gap: 15px; flex-direction: column; } .tools { width: 100%; } .tools label { flex: 1; } .profile { display: none; } .form-grid { grid-template-columns: 1fr; } .new-dialog form { padding: 38px 24px 24px; } .section-intro { align-items: flex-start; gap: 9px; flex-direction: column; } }

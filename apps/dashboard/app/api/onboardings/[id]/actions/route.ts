@@ -36,6 +36,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       type: "payment_intent.succeeded",
       data: { object: { id: `pi_demo_${crypto.randomUUID()}`, metadata: { onboarding_id: id } } },
     };
+  } else if (body.action === "send_payment_link") {
+    endpoint = "send-payment-link";
+    payload = { onboarding_id: id };
   } else {
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }

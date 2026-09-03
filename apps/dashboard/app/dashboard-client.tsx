@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, ArrowUpRight, Bell, BriefcaseBusiness, Check, ChevronDown, CircleHelp, Clock3, Command, FileCheck2, Filter, LayoutGrid, ListChecks, ListFilter, Rocket, Search, Settings2, Sparkles, Users, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowUpRight, Bell, BriefcaseBusiness, Check, ChevronDown, CircleHelp, Clock3, Command, FileCheck2, Filter, LayoutGrid, ListChecks, ListFilter, Rocket, Search, Send, Settings2, Sparkles, Users, X } from "lucide-react";
 import { SiCalendly, SiClickup, SiGmail, SiGoogledrive, SiHubspot, SiN8N, SiPostgresql, SiStripe } from "react-icons/si";
 import { FaSlack } from "react-icons/fa6";
 import type { Onboarding } from "./data";
@@ -85,7 +85,7 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
   const [slaFilter, setSlaFilter] = useState("All");
   const [filterOpen, setFilterOpen] = useState(false);
   const [compact, setCompact] = useState(false);
-  const [selected, setSelected] = useState<Onboarding | null>(null);
+  const [selectedSnapshot, setSelected] = useState<Onboarding | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -93,6 +93,13 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
   const [activeTool, setActiveTool] = useState("intake");
   const [selectedJourneyStep, setSelectedJourneyStep] = useState<JourneyTool | null>(null);
   const [queueOpen, setQueueOpen] = useState(false);
+
+  useEffect(() => {
+    const refresh = window.setInterval(() => {
+      if (document.visibilityState === "visible" && !actionLoading && !submitting) router.refresh();
+    }, 8000);
+    return () => window.clearInterval(refresh);
+  }, [actionLoading, router, submitting]);
 
   const filtered = useMemo(() => onboardings.filter((item) => {
     const haystack = `${item.client} ${item.engagement} ${item.owner} ${item.stage}`.toLowerCase();
@@ -105,7 +112,7 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
   const riskCount = onboardings.filter((item) => item.sla !== "Healthy").length;
   const attentionItems = onboardings.filter((item) => item.stage !== "Complete" && (item.blocker !== "None" || item.sla !== "Healthy")).slice(0, 3);
 
-  const needsContract = onboardings.filter((item) => ["Received", "Commercial hold"].includes(item.stage) && findRequirement(item, ["contract", "agreement", "docusign"])?.status !== "APPROVED");
+  const needsContract = onboardings.filter((item) => ["Received", "Commercial hold"].includes(item.stage) && findRequirement(item, ["deposit", "payment"])?.status === "APPROVED" && findRequirement(item, ["contract", "agreement", "docusign"])?.status !== "APPROVED");
   const needsDeposit = onboardings.filter((item) => ["Received", "Commercial hold"].includes(item.stage) && findRequirement(item, ["deposit", "payment"])?.status !== "APPROVED");
   const readyToProvision = onboardings.filter((item) => item.stage === "Ready to provision");
   const readyForKickoff = onboardings.filter((item) => item.stage === "Ready for kickoff");
@@ -118,12 +125,20 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
     { key: "complete", title: "Ready to complete", items: readyToComplete, actionLabel: "Complete onboarding", action: "complete" },
   ];
   const queueCount = queueGroups.reduce((sum, group) => sum + group.items.length, 0);
+  const commercialCount = new Set([...needsContract, ...needsDeposit].map((item) => item.id)).size;
+  const actionOverview = [
+    { label: "Commercial approval", count: commercialCount, detail: "Contract or deposit needed" },
+    { label: "Build workspace", count: readyToProvision.length, detail: "Ready for ClickUp, Drive and Slack" },
+    { label: "Collect client input", count: waitingCount, detail: "Questionnaire is outstanding" },
+    { label: "Finish kickoff", count: readyForKickoff.length + readyToComplete.length, detail: "Schedule or close onboarding" },
+  ];
   const toolCopy: Record<string, { title: string; detail: string }> = {
     intake: { title: "01 · New client received", detail: "A Slack /onboard-client command, a HubSpot closed-won deal, or the manual dashboard form sends the deal and client details into the same intake endpoint." },
     n8n: { title: "02 · n8n validates the handoff", detail: "n8n checks required fields, normalizes the payload, assigns an idempotency key, and rejects malformed events." },
     commercial: { title: "03 · Stripe + DocuSign", detail: "Stripe confirms the deposit and DocuSign confirms the agreement. Both must pass before provisioning is released." },
     delivery: { title: "04 · ClickUp + Drive + Slack", detail: "The system creates the real delivery project, folder structure, and internal communication channel, then stores every provider ID and URL." },
-    calendly: { title: "05 · Calendly kickoff", detail: "When provisioning and client intake are complete, Calendly records the kickoff and the system generates initial delivery tasks." },
+    client_intake: { title: "05 · Client questionnaire", detail: "Gmail sends a secure intake link. The response captures the information and assets the delivery team needs before kickoff." },
+    calendly: { title: "06 · Calendly kickoff", detail: "When provisioning and client intake are complete, Calendly records the kickoff and the system generates initial delivery tasks." },
     postgres: { title: "Supporting state layer", detail: "PostgreSQL is supporting infrastructure—not a provider step. It preserves lifecycle state, audit history, failures, tasks, and SLA data throughout the journey." },
   };
   const stageCopy: Record<string, { meaning: string; next: string }> = {
@@ -136,6 +151,7 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
     "Kickoff scheduled": { meaning: "The meeting is booked and the initial delivery tasks have been generated.", next: "Run kickoff, confirm the handoff, and complete onboarding." },
     "Complete": { meaning: "The sales-to-delivery handoff is complete and the client has reached kickoff.", next: "Delivery now continues in the provisioned project workspace." },
   };
+  const selected = selectedSnapshot ? onboardings.find((item) => item.id === selectedSnapshot.id) ?? selectedSnapshot : null;
   const selectedJourney = selected ? getJourney(selected) : [];
   const journeyFocus = selectedJourney.find((step) => step.key === selectedJourneyStep) ?? selectedJourney.find((step) => ["current", "failed", "blocked"].includes(step.status)) ?? selectedJourney.at(-1);
 
@@ -167,6 +183,11 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
     const result = await response.json();
     setActionLoading(false);
     if (!response.ok) return showNotice(result.error ?? "Workflow action failed");
+    if (action === "send_payment_link") {
+      router.refresh();
+      showNotice(`Payment link sent to ${result.recipient}`);
+      return;
+    }
     setSelected(null); router.refresh(); showNotice(`${item.client} moved to ${String(result.status).replaceAll("_", " ").toLowerCase()}`);
   }
 
@@ -199,7 +220,7 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
         <div className="content">
           <section className="intro">
             <div><p className="eyebrow"><span /> Client onboarding operating system</p><h1>Closed-won to kickoff,<br />without manual admin.</h1><p className="lede">This dashboard turns new sales into verified, organized, kickoff-ready client engagements—and shows exactly what is blocking each handoff.</p></div>
-            <button className="primary" onClick={() => dialogRef.current?.showModal()}><span>+</span> New onboarding</button>
+            <div className="intro-actions"><button className="primary" onClick={() => dialogRef.current?.showModal()}><span>+</span> New onboarding</button><button className="secondary-action" onClick={() => setQueueOpen(true)}>Open action queue {queueCount > 0 && <b>{queueCount}</b>}</button></div>
           </section>
 
           <section className="purpose-map" aria-label="Purpose and output of the system">
@@ -211,7 +232,7 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
           </section>
 
           <section className="workflow-map" aria-label="Live onboarding workflow">
-            <header><div><p className="eyebrow"><span /> How it works</p><h2>What happens after a deal closes</h2></div><span className="workflow-live"><i /> Live · 10 workflows published</span></header>
+            <header><div><p className="eyebrow"><span /> How it works</p><h2>What happens after a deal closes</h2></div><span className="workflow-live"><i /> Live orchestration</span></header>
             <div className="workflow-track">
               <button className={`workflow-node intake ${activeTool === "intake" ? "selected" : ""}`} onClick={() => setActiveTool("intake")}><span className="dual-logo"><FaSlack /><SiHubspot /></span><b>Slack + HubSpot</b><small>Closed-won</small></button>
               <div className="workflow-wire active"><i /></div>
@@ -221,6 +242,8 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
               <div className="workflow-wire active delay-two"><i /></div>
               <button className={`workflow-node delivery ${activeTool === "delivery" ? "selected" : ""}`} onClick={() => setActiveTool("delivery")}><span className="triple-logo"><SiClickup /><SiGoogledrive /><FaSlack /></span><b>ClickUp · Drive · Slack</b><small>Provision workspace</small></button>
               <div className="workflow-wire active"><i /></div>
+              <button className={`workflow-node gmail ${activeTool === "client_intake" ? "selected" : ""}`} onClick={() => setActiveTool("client_intake")}><span><SiGmail /></span><b>Client intake</b><small>Collect requirements</small></button>
+              <div className="workflow-wire active delay-one"><i /></div>
               <button className={`workflow-node calendly ${activeTool === "calendly" ? "selected" : ""}`} onClick={() => setActiveTool("calendly")}><span><SiCalendly /></span><b>Calendly</b><small>Schedule kickoff</small></button>
             </div>
             <button className={`state-layer ${activeTool === "postgres" ? "selected" : ""}`} onClick={() => setActiveTool("postgres")}><SiPostgresql /><span><b>PostgreSQL state layer</b><small>Client status · audit history · retries · SLA</small></span></button>
@@ -233,6 +256,11 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
             <article className="metric"><p>Ready for kickoff</p><strong>{readyCount}</strong><span className="sub"><Check size={13} /> All requirements met</span></article>
             <article className="metric"><p>Waiting on client</p><strong>{waitingCount}</strong><span className="sub amber"><Clock3 size={13} /> Follow-up queue</span></article>
             <article className="metric"><p>SLA at risk</p><strong>{riskCount}</strong><span className="sub red"><AlertTriangle size={13} /> Action required</span></article>
+          </section>
+
+          <section className="action-overview" aria-label="Work requiring attention">
+            <header><div><span>NEXT ACTIONS</span><h2>What the team should do now</h2></div><button onClick={() => setQueueOpen(true)}>View all {queueCount} actions <ArrowRight size={14} /></button></header>
+            <div>{actionOverview.map((action, index) => <button key={action.label} onClick={() => setQueueOpen(true)}><small>0{index + 1}</small><strong>{action.count}</strong><span>{action.label}</span><p>{action.detail}</p><ArrowUpRight size={15} /></button>)}</div>
           </section>
 
           <section className="attention">
@@ -249,8 +277,8 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
                 <button className={`square ${compact ? "control-active" : ""}`} aria-label="Toggle compact view" onClick={() => setCompact(!compact)}><ListFilter size={16} /></button>
               </div>
             </div>
-            <div className="table-wrap"><table><thead><tr><th>Client</th><th>Stage</th><th>Tool progress</th><th>Progress</th><th>Blocker / next action</th><th>Age</th><th>SLA</th><th /></tr></thead><tbody>
-              {filtered.map((item) => <tr key={item.id} onDoubleClick={() => openClient(item)}><td><div className="client"><span style={{ "--client-accent": item.accent } as React.CSSProperties}>{item.initials}</span><div><strong>{item.client}</strong><small>{item.displayId} · {item.engagement}</small></div></div></td><td><span className={`stage ${statusClass(item.stage)}`}><i />{item.stage}</span></td><td><div className="tool-strip" aria-label={`${item.client} integration progress`}>{getJourney(item).map((step) => <button key={step.key} className={`${step.key} ${step.status}`} title={`${step.label}: ${step.status}`} aria-label={`${step.label}: ${step.status}`} onClick={() => { openClient(item); setSelectedJourneyStep(step.key); }}><ToolLogo tool={step.key} /><i /></button>)}</div></td><td><div className="progress"><span><i style={{ width: `${item.progress}%` }} /></span><b>{item.progress}%</b></div></td><td><span className={item.blocker === "None" ? "clear" : "blocker"}>{item.blocker === "None" && <Check size={13} />}{item.blocker}</span></td><td className="mono">{item.age}</td><td><span className={`sla ${statusClass(item.sla)}`}>{item.sla}</span></td><td><button className="row-open" aria-label={`Open ${item.client}`} onClick={() => openClient(item)}><ArrowUpRight size={16} /></button></td></tr>)}
+            <div className="table-wrap"><table><thead><tr><th>Client</th><th>Stage</th><th>Tool progress</th><th>Progress</th><th>Next action</th><th>Age</th><th>SLA</th><th /></tr></thead><tbody>
+              {filtered.map((item) => <tr key={item.id} className="client-row" tabIndex={0} onClick={() => openClient(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") openClient(item); }}><td><div className="client"><span style={{ "--client-accent": item.accent } as React.CSSProperties}>{item.initials}</span><div><strong>{item.client}</strong><small>{item.displayId} · {item.engagement}</small></div></div></td><td><span className={`stage ${statusClass(item.stage)}`}><i />{item.stage}</span></td><td><div className="tool-strip" aria-label={`${item.client} integration progress`}>{getJourney(item).map((step) => <button key={step.key} className={`${step.key} ${step.status}`} title={`${step.label}: ${step.status}`} aria-label={`${step.label}: ${step.status}`} onClick={(event) => { event.stopPropagation(); openClient(item); setSelectedJourneyStep(step.key); }}><ToolLogo tool={step.key} /><i /></button>)}</div></td><td><div className="progress"><span><i style={{ width: `${item.progress}%` }} /></span><b>{item.progress}%</b></div></td><td><span className={item.blocker === "None" ? "clear" : "blocker"}>{item.blocker === "None" ? stageCopy[item.stage]?.next ?? "Review onboarding" : item.blocker}</span></td><td className="mono">{item.age}</td><td><span className={`sla ${statusClass(item.sla)}`}>{item.sla}</span></td><td><button className="row-open" aria-label={`Open ${item.client}`} onClick={(event) => { event.stopPropagation(); openClient(item); }}><ArrowUpRight size={16} /></button></td></tr>)}
               {filtered.length === 0 && <tr><td className="empty-row" colSpan={8}>No onboardings match this view.</td></tr>}
             </tbody></table></div>
             <footer><span>Showing {filtered.length} of {onboardings.length} active records</span><button onClick={() => { setSearch(""); setSlaFilter("All"); searchRef.current?.focus(); }}>View all onboardings <ArrowUpRight size={14} /></button></footer>
@@ -274,8 +302,8 @@ export function DashboardClient({ onboardings }: { onboardings: Onboarding[] }) 
         {selected.requirements.length > 0 && <div className="detail-list"><small>REQUIREMENTS</small>{selected.requirements.map((requirement) => <span key={requirement.key}><i className={requirement.status.toLowerCase()}>{requirement.status === "APPROVED" ? <Check size={11} /> : "·"}</i>{requirement.label}<b>{requirement.status}</b></span>)}</div>}
         {selected.resources.length > 0 && <div className="detail-list"><small>PROVISIONED RESOURCES</small>{selected.resources.map((resource) => <span key={resource.provider}><i className={resource.status.toLowerCase()}>{resource.status === "SUCCEEDED" ? <Check size={11} /> : "!"}</i>{resource.provider.replaceAll("_", " ")}<b>{resource.status}</b>{resource.url && <a href={resource.url} target="_blank" rel="noreferrer"><ArrowUpRight size={12} /></a>}</span>)}</div>}
         {selected.kickoff && <div className="detail-list"><small>KICKOFF BOOKING</small><span><i className="succeeded"><Check size={11} /></i>{new Date(selected.kickoff.startsAt).toLocaleString()}<b>BOOKED</b></span></div>}
-        <div className="output-list"><small>FINAL ONBOARDING OUTPUT</small><span><Check size={13} /> Commercially approved client</span><span><Check size={13} /> Provisioned delivery workspace</span><span><Check size={13} /> Completed intake and scheduled kickoff</span></div>
-        <div className="drawer-actions">{["Received", "Commercial hold"].includes(selected.stage) && <>{findRequirement(selected, ["contract", "agreement", "docusign"])?.status !== "APPROVED" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected, "simulate_contract")}>{actionLoading ? "Working…" : "Mark contract signed (demo)"}</button>}{findRequirement(selected, ["deposit", "payment"])?.status !== "APPROVED" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected, "simulate_deposit")}>{actionLoading ? "Working…" : "Mark deposit received (demo)"}</button>}</>}{selected.stage === "Ready to provision" && <><button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"provision")}>{actionLoading ? "Working…" : "Provision workspace"}</button><button className="secondary-action" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"provision",{simulate_failure:"google_drive"})}>Test failure path</button></>}{selected.stage === "Provisioning partial" && selected.resources.filter((r) => r.status === "FAILED").map((resource) => <button className="primary" key={resource.provider} disabled={actionLoading} onClick={() => runOnboardingAction(selected,"retry",{provider:resource.provider})}>Retry {resource.provider.replaceAll("_", " ")}</button>)}{selected.stage === "Awaiting client" && selected.intakeToken && <button className="primary" onClick={() => window.open(`/intake/${selected.intakeToken}`,"_blank")}>Open client intake <ArrowUpRight size={14} /></button>}{selected.stage === "Ready for kickoff" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"schedule_kickoff")}>{actionLoading ? "Scheduling…" : "Schedule kickoff"}</button>}{selected.stage === "Kickoff scheduled" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"complete")}>{actionLoading ? "Completing…" : "Complete onboarding"}</button>}<button className="secondary-action" onClick={() => window.open("http://localhost:5678/home/workflows", "_blank")}>View n8n workflows</button></div>
+        <div className="output-list"><small>FINAL ONBOARDING OUTPUT</small>{[{label:"Commercially approved client",done:(stageRank[selected.stage]??0)>=2},{label:"Provisioned delivery workspace",done:(stageRank[selected.stage]??0)>=4},{label:"Completed intake and scheduled kickoff",done:(stageRank[selected.stage]??0)>=6}].map((output)=><span className={output.done ? "done" : "pending"} key={output.label}>{output.done ? <Check size={13} /> : <Clock3 size={13} />}{output.label}<b>{output.done ? "Done" : "Pending"}</b></span>)}</div>
+        <div className="drawer-actions">{["Received", "Commercial hold"].includes(selected.stage) && <>{findRequirement(selected, ["deposit", "payment"])?.status !== "APPROVED" && <button className="payment-link-action" disabled={actionLoading} onClick={() => runOnboardingAction(selected, "send_payment_link")}><span><SiStripe /></span><span><b>{actionLoading ? "Sending…" : selected.paymentRequest ? "Resend payment link" : "Send payment link"}</b><small>{selected.paymentRequest?.sentAt ? `Last sent ${new Date(selected.paymentRequest.sentAt).toLocaleString()}` : "Email secure checkout to this client"}</small></span><Send size={15} /></button>}{findRequirement(selected, ["deposit", "payment"])?.status === "APPROVED" && findRequirement(selected, ["contract", "agreement", "docusign"])?.status !== "APPROVED" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected, "simulate_contract")}>{actionLoading ? "Working…" : "Mark contract signed (demo)"}</button>}{findRequirement(selected, ["deposit", "payment"])?.status !== "APPROVED" && <button className="secondary-action" disabled={actionLoading} onClick={() => runOnboardingAction(selected, "simulate_deposit")}>{actionLoading ? "Working…" : "Mark deposit received (demo)"}</button>}</>}{selected.stage === "Ready to provision" && <><button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"provision")}>{actionLoading ? "Working…" : "Provision workspace"}</button><button className="secondary-action" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"provision",{simulate_failure:"google_drive"})}>Test failure path</button></>}{selected.stage === "Provisioning partial" && selected.resources.filter((r) => r.status === "FAILED").map((resource) => <button className="primary" key={resource.provider} disabled={actionLoading} onClick={() => runOnboardingAction(selected,"retry",{provider:resource.provider})}>Retry {resource.provider.replaceAll("_", " ")}</button>)}{selected.stage === "Awaiting client" && selected.intakeToken && <button className="primary" onClick={() => window.open(`/intake/${selected.intakeToken}`,"_blank")}>Open client intake <ArrowUpRight size={14} /></button>}{selected.stage === "Ready for kickoff" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"schedule_kickoff")}>{actionLoading ? "Scheduling…" : "Schedule kickoff"}</button>}{selected.stage === "Kickoff scheduled" && <button className="primary" disabled={actionLoading} onClick={() => runOnboardingAction(selected,"complete")}>{actionLoading ? "Completing…" : "Complete onboarding"}</button>}<button className="secondary-action" onClick={() => window.open("http://localhost:5678/home/workflows", "_blank")}>View n8n workflows</button></div>
       </aside></div>}
 
       {queueOpen && <div className="drawer-backdrop" onClick={() => setQueueOpen(false)}><aside className="action-panel" onClick={(event) => event.stopPropagation()}>

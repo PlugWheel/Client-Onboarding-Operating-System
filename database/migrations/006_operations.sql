@@ -54,16 +54,19 @@ RETURNS jsonb LANGUAGE plpgsql AS $$
 DECLARE breach_count integer;
 BEGIN
   WITH breached AS (
-    SELECT o.id,o.owner_email FROM app.onboardings o
+    SELECT o.id,o.owner_email,
+      coalesce((SELECT max(r.sequence_number) + 1 FROM app.reminders r WHERE r.onboarding_id=o.id AND r.reminder_type='sla_escalation'),1) AS sequence_number
+    FROM app.onboardings o
     WHERE o.sla_due_at<now() AND o.status NOT IN ('COMPLETE','CANCELLED')
       AND NOT EXISTS (SELECT 1 FROM app.reminders r WHERE r.onboarding_id=o.id AND r.reminder_type='sla_escalation' AND r.created_at>now()-interval '24 hours')
   ), inserted AS (
     INSERT INTO app.reminders(onboarding_id,reminder_type,recipient,sequence_number,status,scheduled_for,sent_at)
-    SELECT id,'sla_escalation',owner_email,1,'sent',now(),now() FROM breached RETURNING onboarding_id
+    SELECT id,'sla_escalation',owner_email,sequence_number,'sent',now(),now() FROM breached
+    ON CONFLICT(onboarding_id,reminder_type,sequence_number) DO NOTHING
+    RETURNING onboarding_id
   ), audit AS (
     INSERT INTO app.audit_events(onboarding_id,event_type,title,detail,actor_type,actor_name)
     SELECT onboarding_id,'sla.breached','Onboarding SLA breached','The onboarding manager was escalated automatically.','system','n8n' FROM inserted RETURNING 1
   ) SELECT count(*) INTO breach_count FROM audit;
   RETURN jsonb_build_object('new_escalations',breach_count,'run_at',now());
 END; $$;
-

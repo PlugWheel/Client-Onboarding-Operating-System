@@ -32,6 +32,7 @@ export async function getOnboardings(): Promise<Onboarding[]> {
     progress: number; blocker: string | null; age_hours: string; sla_due_at: Date;
     resources: Onboarding["resources"]; requirements: Onboarding["requirements"];
     intake_token: string | null; kickoff_starts_at: Date | null; meeting_url: string | null;
+    payment_status: string | null; payment_sent_at: Date | null; payment_url: string | null;
     tasks: Onboarding["tasks"]; timeline: Onboarding["timeline"];
   }>(`
     SELECT o.id::text, c.display_name AS client, d.name AS engagement,
@@ -51,6 +52,7 @@ export async function getOnboardings(): Promise<Onboarding[]> {
       COALESCE((SELECT jsonb_agg(jsonb_build_object('provider',p.provider,'status',p.status,'url',p.external_resource_url,'lastError',p.last_error) ORDER BY p.provider) FROM app.provisioning_steps p WHERE p.onboarding_id=o.id),'[]'::jsonb) AS resources,
       COALESCE((SELECT jsonb_agg(jsonb_build_object('key',r.key,'label',r.label,'status',r.status) ORDER BY r.category,r.label) FROM app.requirements r WHERE r.onboarding_id=o.id),'[]'::jsonb) AS requirements,
       it.token AS intake_token, kb.starts_at AS kickoff_starts_at, kb.meeting_url,
+      pr.status AS payment_status, pr.sent_at AS payment_sent_at, pr.payment_url,
       COALESCE((SELECT jsonb_agg(jsonb_build_object('title',t.title,'status',t.status,'role',t.assignee_role) ORDER BY t.created_at) FROM app.delivery_tasks t WHERE t.onboarding_id=o.id),'[]'::jsonb) AS tasks,
       COALESCE((SELECT jsonb_agg(jsonb_build_object('title',a.title,'detail',a.detail,'occurredAt',a.occurred_at) ORDER BY a.occurred_at DESC) FROM (SELECT * FROM app.audit_events ae WHERE ae.onboarding_id=o.id ORDER BY ae.occurred_at DESC LIMIT 8) a),'[]'::jsonb) AS timeline
     FROM app.onboardings o
@@ -58,6 +60,7 @@ export async function getOnboardings(): Promise<Onboarding[]> {
     JOIN app.deals d ON d.id = o.deal_id
     LEFT JOIN app.intake_tokens it ON it.onboarding_id=o.id
     LEFT JOIN app.kickoff_bookings kb ON kb.onboarding_id=o.id
+    LEFT JOIN app.payment_requests pr ON pr.onboarding_id=o.id
     WHERE o.status <> 'CANCELLED'
     ORDER BY o.created_at DESC
     LIMIT 50
@@ -79,6 +82,7 @@ export async function getOnboardings(): Promise<Onboarding[]> {
       accent: palette[index % palette.length],
       resources: row.resources, requirements: row.requirements, intakeToken: row.intake_token,
       kickoff: row.kickoff_starts_at ? { startsAt: row.kickoff_starts_at.toISOString(), meetingUrl: row.meeting_url } : null,
+      paymentRequest: row.payment_url ? { status: row.payment_status ?? "sent", sentAt: row.payment_sent_at?.toISOString() ?? null, url: row.payment_url } : null,
       tasks: row.tasks, timeline: row.timeline,
     };
   });

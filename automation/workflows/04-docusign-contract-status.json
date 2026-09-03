@@ -70,6 +70,30 @@
       "typeVersion":2.6,
       "position":[1650,240],
       "credentials":{"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters":{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":2},"conditions":[{"id":"d6ff135e-5582-4a93-b8ca-375746579f58","leftValue":"={{ $json.result.status }}","rightValue":"READY_TO_PROVISION","operator":{"type":"string","operation":"equals"}}],"combinator":"and"},"options":{}},
+      "id":"06ab3b28-f3f8-45f2-aa69-bd5237fe2fc3",
+      "name":"Commercial Gates Complete",
+      "type":"n8n-nodes-base.if",
+      "typeVersion":2.2,
+      "position":[1880,240]
+    },
+    {
+      "parameters":{"jsCode":"const id=String($json.result.onboarding_id??$('Normalize Envelope Status').item.json.onboarding_id); return [{json:{onboarding_id:id,request_body:JSON.stringify({onboarding_id:id})}}];"},
+      "id":"55ae289b-f4be-401d-b632-082293af6bd4",
+      "name":"Prepare Provisioning Request",
+      "type":"n8n-nodes-base.code",
+      "typeVersion":2,
+      "position":[2110,200]
+    },
+    {
+      "parameters":{"method":"POST","url":"http://localhost:5678/webhook/provision-onboarding","sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{$json.request_body}}","options":{"timeout":300000}},
+      "id":"0beec451-654a-42ce-aa1f-02480960240f",
+      "name":"Provision After Signature",
+      "type":"n8n-nodes-base.httpRequest",
+      "typeVersion":4.4,
+      "position":[2340,200]
     }
   ],
   "pinData":{},
@@ -80,7 +104,10 @@
     "Read Envelope Status":{"main":[[{"node":"Normalize Envelope Status","type":"main","index":0}]]},
     "Normalize Envelope Status":{"main":[[{"node":"Update Envelope","type":"main","index":0}]]},
     "Update Envelope":{"main":[[{"node":"Is Terminal Status","type":"main","index":0}]]},
-    "Is Terminal Status":{"main":[[{"node":"Apply Contract Result","type":"main","index":0}],[]]}
+    "Is Terminal Status":{"main":[[{"node":"Apply Contract Result","type":"main","index":0}],[]]},
+    "Apply Contract Result":{"main":[[{"node":"Commercial Gates Complete","type":"main","index":0}]]},
+    "Commercial Gates Complete":{"main":[[{"node":"Prepare Provisioning Request","type":"main","index":0}],[]]},
+    "Prepare Provisioning Request":{"main":[[{"node":"Provision After Signature","type":"main","index":0}]]}
   },
   "active":false,
   "settings":{"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},

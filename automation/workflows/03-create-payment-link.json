@@ -1,0 +1,146 @@
+{
+  "id": "StripePaymentLink01",
+  "name": "03A | Commercial Gate | Create & Email Stripe Payment Link",
+  "nodes": [
+    {
+      "parameters": {"httpMethod":"POST","path":"send-payment-link","responseMode":"responseNode","options":{}},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8601",
+      "name": "Payment Link Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [180,300],
+      "webhookId": "35d0e790-0986-4d5d-9d33-1fcc5de1579e"
+    },
+    {
+      "parameters": {"jsCode":"const body=$json.body??$json;const id=String(body.onboarding_id??'');if(!/^[0-9a-f-]{36}$/i.test(id))throw new Error('A valid onboarding_id is required');return[{json:{onboarding_id:id}}];"},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8602",
+      "name": "Validate Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [410,300]
+    },
+    {
+      "parameters": {"operation":"executeQuery","query":"SELECT o.id AS onboarding_id,c.display_name AS client_name,c.primary_contact_name,c.primary_contact_email,d.name AS engagement,d.value_cents,d.currency,pr.stripe_payment_link_id AS existing_link_id,pr.payment_url AS existing_payment_url,pr.sent_at AS existing_sent_at FROM app.onboardings o JOIN app.clients c ON c.id=o.client_id JOIN app.deals d ON d.id=o.deal_id LEFT JOIN app.payment_requests pr ON pr.onboarding_id=o.id WHERE o.id=$1::uuid AND o.status='RECEIVED' AND d.value_cents>0;","options":{"queryReplacement":"={{$json.onboarding_id}}"}},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8603",
+      "name": "Load Payment Context",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [640,300],
+      "alwaysOutputData": true,
+      "credentials": {"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters": {"jsCode":"if(!$json.onboarding_id)throw new Error('Onboarding is unavailable, already advanced, or has a zero amount');if($json.existing_link_id)return[{json:{...$json,reused:true,payment_url:$json.existing_payment_url}}];const currency=String($json.currency??'USD').toLowerCase();const form={currency,unit_amount:String($json.value_cents),'product_data[name]':String($json.engagement),'metadata[onboarding_id]':String($json.onboarding_id)};const price_body=Object.entries(form).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');return[{json:{...$json,reused:false,price_body}}];"},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8604",
+      "name": "Prepare Stripe Price",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [870,300]
+    },
+    {
+      "parameters": {"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":2},"conditions":[{"id":"c1415ad8-c5c2-48a5-baae-7c2d6d7e8615","leftValue":"={{!$json.reused}}","rightValue":true,"operator":{"type":"boolean","operation":"true","singleValue":true}}],"combinator":"and"},"options":{}},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8605",
+      "name": "New Link Required",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1100,300]
+    },
+    {
+      "parameters": {"authentication":"predefinedCredentialType","nodeCredentialType":"stripeApi","method":"POST","url":"https://api.stripe.com/v1/prices","sendHeaders":true,"headerParameters":{"parameters":[{"name":"Content-Type","value":"application/x-www-form-urlencoded"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/x-www-form-urlencoded","body":"={{$json.price_body}}","options":{}},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8606",
+      "name": "Create Stripe Price",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1330,220],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {"stripeApi":{"id":"gptXAmqRDn7ZMPgM","name":"Stripe account"}}
+    },
+    {
+      "parameters": {"jsCode":"const ctx=$('Prepare Stripe Price').item.json;if(!$json.id)throw new Error('Stripe did not return a price ID');const form={'line_items[0][price]':String($json.id),'line_items[0][quantity]':'1','payment_intent_data[metadata][onboarding_id]':String(ctx.onboarding_id),'payment_intent_data[metadata][source]':'client_onboarding_os','metadata[onboarding_id]':String(ctx.onboarding_id),'after_completion[type]':'hosted_confirmation','after_completion[hosted_confirmation][custom_message]':'Payment received. Your agreement will be emailed shortly.'};const link_body=Object.entries(form).map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');return[{json:{...ctx,stripe_price_id:String($json.id),link_body}}];"},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8607",
+      "name": "Prepare Stripe Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560,220]
+    },
+    {
+      "parameters": {"authentication":"predefinedCredentialType","nodeCredentialType":"stripeApi","method":"POST","url":"https://api.stripe.com/v1/payment_links","sendHeaders":true,"headerParameters":{"parameters":[{"name":"Content-Type","value":"application/x-www-form-urlencoded"}]},"sendBody":true,"contentType":"raw","rawContentType":"application/x-www-form-urlencoded","body":"={{$json.link_body}}","options":{}},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8608",
+      "name": "Create Stripe Payment Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1790,220],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {"stripeApi":{"id":"gptXAmqRDn7ZMPgM","name":"Stripe account"}}
+    },
+    {
+      "parameters": {"jsCode":"const ctx=$('Prepare Stripe Link').item.json;if(!$json.id||!$json.url)throw new Error('Stripe did not return a payment link');return[{json:{...ctx,stripe_payment_link_id:String($json.id),payment_url:String($json.url)}}];"},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8609",
+      "name": "Normalize New Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2020,220]
+    },
+    {
+      "parameters": {"jsCode":"const subject=`Payment request — ${$json.client_name}`;const encodedSubject=`=?UTF-8?B?${Buffer.from(subject,'utf8').toString('base64')}?=`;const amount=new Intl.NumberFormat('en-US',{style:'currency',currency:String($json.currency??'USD')}).format(Number($json.value_cents)/100);const html=`<div style=\"font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#1d2722\"><p style=\"color:#635bff;font-size:12px;letter-spacing:.08em\">PAYMENT REQUEST</p><h1>Let’s begin your engagement.</h1><p>Hello ${$json.primary_contact_name},</p><p>Please submit the <strong>${amount}</strong> payment for <strong>${$json.engagement}</strong> using Stripe’s secure checkout.</p><p><a href=\"${$json.payment_url}\" style=\"display:inline-block;background:#635bff;color:#fff;padding:14px 20px;text-decoration:none\">Pay securely with Stripe</a></p><p style=\"font-size:12px;color:#667069\">After payment, your agreement will be emailed automatically.</p></div>`;const mime=[`To: ${$json.primary_contact_email}`,`Subject: ${encodedSubject}`,'MIME-Version: 1.0','Content-Type: text/html; charset=UTF-8','',html].join('\\r\\n');const raw=Buffer.from(mime).toString('base64').replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');return[{json:{...$json,raw}}];"},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8610",
+      "name": "Build Payment Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2250,300]
+    },
+    {
+      "parameters": {"authentication":"predefinedCredentialType","nodeCredentialType":"gmailOAuth2","method":"POST","url":"https://gmail.googleapis.com/gmail/v1/users/me/messages/send","sendBody":true,"contentType":"raw","rawContentType":"application/json","body":"={{JSON.stringify({raw:$json.raw})}}","options":{}},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8611",
+      "name": "Send Payment Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2480,300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {"gmailOAuth2":{"id":"rOfFrcEx7nfCI8ft","name":"Gmail account"}}
+    },
+    {
+      "parameters": {"operation":"executeQuery","query":"WITH payment AS (INSERT INTO app.payment_requests(onboarding_id,stripe_price_id,stripe_payment_link_id,payment_url,amount_cents,currency,recipient,status,sent_at) VALUES($1::uuid,$2,$3,$4,$5,$6,$7,'sent',now()) ON CONFLICT(onboarding_id) DO UPDATE SET sent_at=now(),updated_at=now() RETURNING onboarding_id,payment_url,sent_at), delivery AS (INSERT INTO app.email_deliveries(onboarding_id,purpose,recipient,provider_message_id,status,sent_at) VALUES($1::uuid,'payment_request',$7,$8,'sent',now()) RETURNING provider_message_id), audit AS (INSERT INTO app.audit_events(onboarding_id,event_type,title,detail,actor_type,actor_name,metadata) VALUES($1::uuid,'payment.request_sent','Stripe payment request sent','A client-specific Stripe payment link was emailed through Gmail.','integration','Stripe + Gmail',jsonb_build_object('payment_link_id',$3,'payment_url',$4,'provider_message_id',$8,'recipient',$7)) RETURNING 1) SELECT payment_url,sent_at FROM payment;","options":{"queryReplacement":"={{[$('Build Payment Email').item.json.onboarding_id,$('Build Payment Email').item.json.stripe_price_id??'reused',$('Build Payment Email').item.json.stripe_payment_link_id??$('Build Payment Email').item.json.existing_link_id,$('Build Payment Email').item.json.payment_url,$('Build Payment Email').item.json.value_cents,String($('Build Payment Email').item.json.currency).toUpperCase(),$('Build Payment Email').item.json.primary_contact_email,$json.id]}}"}},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8612",
+      "name": "Record Payment Request",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [2710,300],
+      "credentials": {"postgres":{"id":"pWvncY5EEynulaOP","name":"Postgres account"}}
+    },
+    {
+      "parameters": {"respondWith":"json","responseBody":"={{ {ok:true,onboarding_id:$('Build Payment Email').item.json.onboarding_id,recipient:$('Build Payment Email').item.json.primary_contact_email,payment_url:$json.payment_url,sent_at:$json.sent_at} }}","options":{"responseCode":200}},
+      "id": "c1415ad8-c5c2-48a5-baae-7c2d6d7e8613",
+      "name": "Return Payment Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [2940,300]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Payment Link Request":{"main":[[{"node":"Validate Request","type":"main","index":0}]]},
+    "Validate Request":{"main":[[{"node":"Load Payment Context","type":"main","index":0}]]},
+    "Load Payment Context":{"main":[[{"node":"Prepare Stripe Price","type":"main","index":0}]]},
+    "Prepare Stripe Price":{"main":[[{"node":"New Link Required","type":"main","index":0}]]},
+    "New Link Required":{"main":[[{"node":"Create Stripe Price","type":"main","index":0}],[{"node":"Build Payment Email","type":"main","index":0}]]},
+    "Create Stripe Price":{"main":[[{"node":"Prepare Stripe Link","type":"main","index":0}]]},
+    "Prepare Stripe Link":{"main":[[{"node":"Create Stripe Payment Link","type":"main","index":0}]]},
+    "Create Stripe Payment Link":{"main":[[{"node":"Normalize New Link","type":"main","index":0}]]},
+    "Normalize New Link":{"main":[[{"node":"Build Payment Email","type":"main","index":0}]]},
+    "Build Payment Email":{"main":[[{"node":"Send Payment Email","type":"main","index":0}]]},
+    "Send Payment Email":{"main":[[{"node":"Record Payment Request","type":"main","index":0}]]},
+    "Record Payment Request":{"main":[[{"node":"Return Payment Request","type":"main","index":0}]]}
+  },
+  "active": false,
+  "settings": {"executionOrder":"v1","timezone":"Asia/Dhaka","errorWorkflow":"G59thUjhLUYVEdGq"},
+  "versionId": "d2c2a550-142c-49c2-a46e-00f4bbc771cb",
+  "meta": {"templateCredsSetupCompleted":true},
+  "tags": []
+}
